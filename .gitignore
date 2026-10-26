@@ -1,0 +1,11 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.ipynb_checkpoints/
+
+# Large files in outputs (figures and logs are fine to commit)
+outputs/**/*.pt
+outputs/**/*.pth
+outputs/**/*.ckpt
+outputs/**/*.npy
