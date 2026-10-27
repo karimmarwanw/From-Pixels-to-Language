@@ -11,8 +11,17 @@ class EDAConfig:
     train_name: str
     cache_dir: str
     figures_dir: str
+    stats_dir: str
     seed: int = 42
     n_inspect: int = 3
+    rebuild_stats: bool = False
+    small_side_px: int = 224
+    gray_tolerance: int = 3
+    n_unusual: int = 5
+    wide_aspect: float = 2.0
+    tall_aspect: float = 0.5
+    dark_brightness: float = 35
+    bright_brightness: float = 220
 
 
 def load_eda_config(path: str | Path) -> EDAConfig:

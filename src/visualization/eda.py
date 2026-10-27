@@ -92,3 +92,81 @@ def plot_class_distribution(counts: pd.DataFrame, out_path: str | Path) -> Path:
                  fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
     fig.tight_layout()
     return _save(fig, out_path)
+
+
+def plot_image_sizes(df: pd.DataFrame, input_size: int, out_path: str | Path) -> Path:
+    """Width, height and aspect-ratio histograms, plus a width-vs-height scatter.
+
+    Args:
+        df: image stats (columns width, height, aspect).
+        input_size: model input side (e.g. 224), drawn as a reference line.
+    """
+    fig, axes = plt.subplots(1, 4, figsize=(18, 4.2))
+    ax_w, ax_h, ax_a, ax_s = axes
+
+    for ax, col, label in [(ax_w, "width", "Width (px)"), (ax_h, "height", "Height (px)")]:
+        ax.hist(df[col], bins=40, color=COLOR_1)
+        ax.axvline(input_size, color=INK_SECONDARY, lw=1.2, ls="--")
+        ax.text(input_size, ax.get_ylim()[1] * 0.92, f" model input {input_size}", fontsize=8, color=INK_SECONDARY)
+        ax.set_xlabel(label)
+        ax.set_ylabel("Images")
+        ax.set_title(f"{label.split()[0]}: median {df[col].median():.0f} px", loc="left")
+        ax.grid(axis="y")
+
+    ax_a.hist(df["aspect"], bins=50, color=COLOR_1)
+    ax_a.axvline(1.0, color=INK_SECONDARY, lw=1.2, ls="--")
+    ax_a.text(1.0, ax_a.get_ylim()[1] * 0.92, " square", fontsize=8, color=INK_SECONDARY)
+    ax_a.set_xlabel("Aspect ratio (width / height)")
+    ax_a.set_ylabel("Images")
+    ax_a.set_title(f"Aspect: median {df['aspect'].median():.2f} (landscape)", loc="left")
+    ax_a.grid(axis="y")
+
+    ax_s.scatter(df["width"], df["height"], s=6, alpha=0.25, color=COLOR_1, edgecolors="none")
+    ax_s.axvline(input_size, color=INK_SECONDARY, lw=1, ls="--")
+    ax_s.axhline(input_size, color=INK_SECONDARY, lw=1, ls="--")
+    ax_s.set_xlabel("Width (px)")
+    ax_s.set_ylabel("Height (px)")
+    ax_s.set_title("Width vs height (one dot per image)", loc="left")
+    ax_s.grid(True)
+
+    fig.suptitle("Step 3 - image sizes in the official train set",
+                 fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
+def plot_color_modes(categories: list[str], counts: list[int], out_path: str | Path) -> Path:
+    """Horizontal bars of image color categories on a log axis (so tiny counts stay visible)."""
+    fig, ax = plt.subplots(figsize=(9, 2.8))
+    y = range(len(categories))
+    ax.barh(y, counts, height=0.55, color=COLOR_1)
+    for i, n in enumerate(counts):
+        ax.text(n * 1.15, i, f"{n:,}", va="center", fontsize=10, color=INK)
+    ax.set_yticks(list(y), categories)
+    ax.invert_yaxis()
+    ax.set_xscale("log")
+    ax.set_xlim(0.8, max(counts) * 4)
+    ax.set_xlabel("Images (log scale)")
+    ax.set_title("Step 3 - color modes in the official train set", loc="left", fontsize=12, fontweight="bold")
+    ax.grid(axis="x")
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
+def plot_image_rows(rows: list[tuple[str, list[Image], list[str]]], suptitle: str, out_path: str | Path) -> Path:
+    """A grid with one titled row per group of images, e.g. ('Smallest', [img, ...], [caption, ...])."""
+    n_cols = max(len(images) for _, images, _ in rows)
+    fig, axes = plt.subplots(len(rows), n_cols, figsize=(3.2 * n_cols, 3.0 * len(rows)), squeeze=False)
+    for r, (row_title, images, captions) in enumerate(rows):
+        for c in range(n_cols):
+            ax = axes[r][c]
+            ax.axis("off")
+            if c < len(images):
+                img = images[c]
+                ax.imshow(img, cmap="gray" if img.mode == "L" else None, vmin=0, vmax=255)
+                ax.set_title(captions[c], fontsize=8)
+        axes[r][0].text(-0.08, 0.5, row_title, transform=axes[r][0].transAxes, rotation=90,
+                        ha="right", va="center", fontsize=11, fontweight="bold", color=INK)
+    fig.suptitle(suptitle, fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
+    fig.tight_layout()
+    return _save(fig, out_path)

@@ -6,3 +6,13 @@ figures_dir: outputs/figures/eda  # every EDA figure: stepNN_*.png
 
 seed: 42
 n_inspect: 3                      # step 1: how many full records to print
+
+stats_dir: outputs/eda            # step 3: cached per-image table (image_stats.csv)
+rebuild_stats: false              # step 3: true = rescan all images even if the CSV exists
+small_side_px: 224                # step 3: "small" = shorter side below the model input size
+gray_tolerance: 3                 # step 3: max |R-G|,|G-B|,|R-B| (0-255) still counted as gray (JPEG noise)
+n_unusual: 5                      # step 3: images per row in the unusual-images grid
+wide_aspect: 2.0                  # step 3: "very wide" = width / height above this
+tall_aspect: 0.5                  # step 3: "very tall" = width / height below this (mirror of 2.0)
+dark_brightness: 35               # step 3: "very dark" = mean pixel value below this (0-255)
+bright_brightness: 220            # step 3: "very bright" = mean pixel value above this (35 from white)
