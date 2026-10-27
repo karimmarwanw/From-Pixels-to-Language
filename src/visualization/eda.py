@@ -210,3 +210,17 @@ def plot_nearest_distance(distances: list[int], max_distance: int, out_path: str
     ax.grid(axis="y")
     fig.tight_layout()
     return _save(fig, out_path)
+
+
+def plot_image_grid(images: list[Image], titles: list[str], n_cols: int, suptitle: str, out_path: str | Path) -> Path:
+    """Images in a grid, each with a (multi-line) title underneath the previous row."""
+    n_rows = -(-len(images) // n_cols)  # ceiling division
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(4.2 * n_cols, 4.4 * n_rows), squeeze=False)
+    for ax in axes.flat:
+        ax.axis("off")
+    for ax, img, title in zip(axes.flat, images, titles):
+        ax.imshow(img, cmap="gray" if img.mode == "L" else None, vmin=0, vmax=255)
+        ax.set_title(title, fontsize=8, loc="left")
+    fig.suptitle(suptitle, fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.975))  # leave room so the suptitle does not cover the first row
+    return _save(fig, out_path)

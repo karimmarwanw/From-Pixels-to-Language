@@ -1,6 +1,6 @@
 """Load YAML config files into typed dataclasses."""
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 
 import yaml
@@ -24,6 +24,10 @@ class EDAConfig:
     bright_brightness: float = 220
     dup_max_distance: int = 4
     n_lookalikes: int = 4
+    n_samples: int = 16
+    sample_cols: int = 4
+    similar_groups: list[str] = field(default_factory=lambda: ["Gull", "Tern"])
+    caption_wrap: int = 40
 
 
 def load_eda_config(path: str | Path) -> EDAConfig:

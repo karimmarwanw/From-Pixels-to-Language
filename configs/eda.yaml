@@ -20,3 +20,8 @@ bright_brightness: 220            # step 3: "very bright" = mean pixel value abo
 dup_max_distance: 4               # step 4: pHash bits that may differ for a near-duplicate (chosen by eye:
                                   #         all pairs <= 4 were the same photo, all pairs >= 6 were not)
 n_lookalikes: 4                   # step 4: closest NON-duplicate pairs to show (justifies the threshold)
+
+n_samples: 16                     # step 5: random images in the sample grid
+sample_cols: 4                    # step 5: columns of the sample grid
+similar_groups: [Gull, Tern]      # step 5: one row per word; shows every species whose name contains it
+caption_wrap: 40                  # step 5: characters per line when drawing captions under images

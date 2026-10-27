@@ -1,0 +1,67 @@
+
+========================================================================
+STEP 5 - 16 random training images (seed 42)
+========================================================================
+row  204  Parakeet Auklet              "the bird has a white eyering and a white breast and belly."
+row  244  Brewer Blackbird             "a small black bird with light yellow eyes and a black beak."
+row  260  Brewer Blackbird             "the bird has black eyes, is almost all grey, with hints of orange on some of its feather tips."
+row  712  Red faced Cormorant          "a bird with a straight, thin, and slightly hooked bill, red eyepatch and eyering, long neck, and all black breast and belly"
+row  767  Bronzed Cowbird              "the bird has sharp pointed beak that is small when compared to its body, covered fully in black"
+row  839  Brown Creeper                "the bird is brown with a skinny beak and tan underbelly."
+row  912  Black billed Cuckoo          "a bird with a triangular, downward curved bill, brown head, and white breast."
+row 1143  Least Flycatcher             "white belly with a brown body and a very short, small brown beak."
+row 1828  Heermann Gull                "this medium sized bird has a grey belly, an orange beak that is slightly curved, and a black tail."
+row 2006  Anna Hummingbird             "this little bird has a wing span the size of its body, black stripes on its fail feathers, a red chin and a brown body."
+row 2253  Dark eyed Junco              "this bird has a brown crest, dark gray nape and back, witha pink beak."
+row 3456  Chipping Sparrow             "small light grey bird with brown crown and small grey beak."
+row 4467  Sage Thrasher                "the large bird has a white and brown belly with yellow eyering."
+row 4837  Canada Warbler               "very colorful yellow and black/grey bird very small with a spotted design on the chest"
+row 5238  Pine Warbler                 "this little bird is mostly yellow with black and white wings and gray vent."
+row 5543  Bohemian Waxwing             "the bird has a small bill that is black and white."
+
+========================================================================
+How fine-grained is the task? Species sharing their last name word
+========================================================================
+family word    species
+Warbler             25
+Sparrow             21
+Gull                 8
+Flycatcher           7
+Tern                 7
+Vireo                7
+Wren                 7
+Woodpecker           6
+Kingfisher           5
+Auklet               4
+Blackbird            4
+Grebe                4
+... 37 family words are shared by 2+ species, covering 167 of 200 species
+
+========================================================================
+Look-alike group 'Gull': 8 species, one random image each
+========================================================================
+  California Gull          row 1746  "the bird has a yellow bill that is curved as well as black."
+  Glaucous winged Gull     row 1777  "a large white bird with a bill that is both black and white."
+  Heermann Gull            row 1816  "the bill is red and black as well as somewhat curved."
+  Herring Gull             row 1849  "a large white and brown marbled bird with white and brown secondaries and a small black bill."
+  Ivory Gull               row 1860  "the small white bird has a long bill and black feet."
+  Ring billed Gull         row 1907  "abdomen and belly one color with gray spots on nape and abdomen"
+  Slaty backed Gull        row 1926  "relative to the body the bird's beak is pretty long"
+  Western Gull             row 1972  "a white bird with webbed feet, an orange beak and a red spot on its beak."
+
+========================================================================
+Look-alike group 'Tern': 7 species, one random image each
+========================================================================
+  Artic Tern               row 4217  "this striking bird is black and white and the black is on the crown and nape and the white covers the rest of the body. he has orange feet, tarsus and a long downward curved bill that is pointy."
+  Black Tern               row 4248  "this bird is brown and white with a long wingspan and a straight beak."
+  Caspian Tern             row 4273  "this bird has a dark grey belly with a white throat and black crown."
+  Common Tern              row 4299  "this thin, white bird has a black crown and orange and black, thin beak."
+  Elegant Tern             row 4323  "the bird has an orange bill and a black and white crown as well as white belly."
+  Forsters Tern            row 4360  "a bird with downward curved black and orange bill, black crown, and white body."
+  Least Tern               row 4394  "this bird is almost all white with a black crest and black tipped primaries."
+
+========================================================================
+Files
+========================================================================
+  outputs\figures\eda\step05_random_samples.png
+  outputs\figures\eda\step05_similar_species.png

@@ -6,6 +6,7 @@ All steps use the official TRAIN set only; the test set is never loaded.
 """
 
 import random
+import textwrap
 from pathlib import Path
 
 import numpy as np
@@ -26,6 +27,7 @@ from src.utils.config import EDAConfig
 from src.visualization.eda import (
     plot_class_distribution,
     plot_color_modes,
+    plot_image_grid,
     plot_image_pairs,
     plot_image_rows,
     plot_image_sizes,
@@ -275,9 +277,61 @@ def step4_duplicates(cfg: EDAConfig) -> None:
         print(f"  {p}")
 
 
+def step5_samples(cfg: EDAConfig) -> None:
+    """Random sample grid with captions, and rows of look-alike species (fine-grained task)."""
+    train = load_cub_split(cfg.train_name, "train", cfg.cache_dir)
+    names = get_label_names(train)
+    rng = random.Random(cfg.seed)
+
+    # The first caption only: proper caption splitting/cleaning is step 6.
+    def first_caption(description: str) -> str:
+        return description.split("\n")[0].strip()
+
+    _header(f"STEP 5 - {cfg.n_samples} random training images (seed {cfg.seed})")
+    idx = sorted(rng.sample(range(len(train)), cfg.n_samples))
+    images, titles = [], []
+    for i in idx:
+        rec = train[i]
+        caption = first_caption(rec["description"])
+        print(f"row {i:>4}  {names[rec['label']]:<28} \"{caption}\"")
+        images.append(rec["image"])
+        titles.append(f"{names[rec['label']]} (row {i})\n" + textwrap.fill(f'"{caption}"', cfg.caption_wrap))
+    out_grid = plot_image_grid(images, titles, cfg.sample_cols,
+                               f"Step 5 - {cfg.n_samples} random training images with one of their captions",
+                               Path(cfg.figures_dir) / "step05_random_samples.png")
+
+    _header("How fine-grained is the task? Species sharing their last name word")
+    families = pd.Series([n.split()[-1] for n in names]).value_counts()
+    print(f"{'family word':<14}{'species':>8}")
+    for word, k in families[families > 1].head(12).items():
+        print(f"{word:<14}{k:>8}")
+    print(f"... {int((families > 1).sum())} family words are shared by 2+ species, "
+          f"covering {int(families[families > 1].sum())} of {len(names)} species")
+
+    rows = []
+    for word in cfg.similar_groups:
+        group = [lbl for lbl, n in enumerate(names) if word in n.split()]
+        _header(f"Look-alike group '{word}': {len(group)} species, one random image each")
+        group_images, group_titles = [], []
+        for lbl in group:
+            i = rng.choice([j for j, y in enumerate(train["label"]) if y == lbl])
+            rec = train[i]
+            print(f"  {names[lbl]:<24} row {i:>4}  \"{first_caption(rec['description'])}\"")
+            group_images.append(rec["image"])
+            group_titles.append(f"{names[lbl]}\nrow {i}")
+        rows.append((f"{word}s ({len(group)})", group_images, group_titles))
+    out_similar = plot_image_rows(rows, "Step 5 - look-alike species: classes differ in small details",
+                                  Path(cfg.figures_dir) / "step05_similar_species.png")
+
+    _header("Files")
+    for p in [out_grid, out_similar]:
+        print(f"  {p}")
+
+
 STEPS = {
     1: step1_inspect,
     2: step2_class_distribution,
     3: step3_image_properties,
     4: step4_duplicates,
+    5: step5_samples,
 }
