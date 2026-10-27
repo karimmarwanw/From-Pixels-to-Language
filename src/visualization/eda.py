@@ -325,3 +325,42 @@ def plot_text_rows(
     fig.suptitle(suptitle, fontsize=14, fontweight="bold", color=INK, x=0.01, ha="left")
     fig.tight_layout(rect=(0, 0, 1, 0.98))
     return _save(fig, out_path)
+
+
+def plot_split_distribution(train_counts: list[int], val_counts: list[int], out_path: str | Path) -> Path:
+    """Per-class image counts of the train/val split.
+
+    Left: one stacked bar per class (train at the bottom, val on top), in label order.
+    Right: how many classes ended up with each number of val images.
+
+    Args:
+        train_counts, val_counts: images per class, indexed by label id.
+    """
+    labels = range(len(train_counts))
+    fig, (ax_cls, ax_val) = plt.subplots(1, 2, figsize=(16, 4.8), gridspec_kw={"width_ratios": [4, 1]})
+
+    ax_cls.bar(labels, train_counts, width=0.75, color=COLOR_1, label="train (85%)")
+    ax_cls.bar(labels, val_counts, bottom=train_counts, width=0.75, color=COLOR_2, label="val (15%)")
+    ax_cls.set_xlim(-1, len(train_counts))
+    ax_cls.set_ylim(0, max(t + v for t, v in zip(train_counts, val_counts)) * 1.15)
+    ax_cls.set_xlabel("Class label (0-199)")
+    ax_cls.set_ylabel("Images per class")
+    ax_cls.set_title("Every class is split in the same proportion", loc="left")
+    ax_cls.grid(axis="y")
+    ax_cls.legend(loc="upper right", ncol=2)
+
+    values, counts = np.unique(val_counts, return_counts=True)
+    ax_val.bar(range(len(values)), counts, width=0.6, color=COLOR_2)
+    ax_val.set_xticks(range(len(values)), [str(v) for v in values])
+    for i, n in enumerate(counts):
+        ax_val.text(i, n, str(n), ha="center", va="bottom", fontsize=10, color=INK)
+    ax_val.set_ylim(0, counts.max() * 1.15)
+    ax_val.set_xlabel("Val images in the class")
+    ax_val.set_ylabel("Number of classes")
+    ax_val.set_title("Val images per class", loc="left")
+    ax_val.grid(axis="y")
+
+    fig.suptitle("Step 7 - stratified 85/15 train/val split of the official train set",
+                 fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
+    fig.tight_layout()
+    return _save(fig, out_path)

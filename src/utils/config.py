@@ -35,6 +35,8 @@ class EDAConfig:
     body_part_words: list[str] = field(default_factory=list)
     typo_examples: list[str] = field(default_factory=list)
     n_template_examples: int = 5
+    split_path: str = "data/splits/split.json"
+    val_size: float = 0.15
 
 
 def load_eda_config(path: str | Path) -> EDAConfig:

@@ -36,3 +36,6 @@ body_part_words: [wings, wing, belly, breast, head, crown, bill, beak, tail, thr
                   primaries, secondaries, superciliary, wingbars, crest, neck, cheek, abdomen, eyebrow, eye, eyes, feathers]
 typo_examples: [whtie, bil, beek, retrices, supercillary, witha]  # step 6: typos to SHOW in the problems figure
 n_template_examples: 5            # step 6: different birds shown with the same template caption
+
+split_path: data/splits/split.json  # step 7: committed, shared by the whole team
+val_size: 0.15                      # step 7: share of the official train set held out for validation

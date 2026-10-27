@@ -7,6 +7,7 @@ All steps use the official TRAIN set only; the test set is never loaded.
 
 import random
 import textwrap
+from collections import Counter
 from pathlib import Path
 
 import numpy as np
@@ -24,6 +25,7 @@ from src.data.duplicates import (
 )
 from src.data.image_stats import load_or_build_image_stats
 from src.data.loading import get_label_names, load_cub_split
+from src.data.split import load_split, make_split, save_split
 from src.utils.config import EDAConfig
 from src.visualization.eda import (
     plot_caption_lengths,
@@ -35,6 +37,7 @@ from src.visualization.eda import (
     plot_image_sizes,
     plot_nearest_distance,
     plot_records,
+    plot_split_distribution,
     plot_text_rows,
     plot_word_bars,
     plot_word_frequency,
@@ -504,6 +507,60 @@ def step6_captions(cfg: EDAConfig) -> None:
         print(f"  {p}")
 
 
+def step7_split(cfg: EDAConfig) -> None:
+    """Stratified 85/15 train/val split of the official train set, duplicate pairs kept together."""
+    train = load_cub_split(cfg.train_name, "train", cfg.cache_dir)
+    names = get_label_names(train)
+    labels = list(train["label"])
+
+    # Duplicate pairs from step 4 (same hashes, same threshold) must stay on one side.
+    hashes = load_or_build_hashes(train, Path(cfg.stats_dir) / "image_hashes.csv", cfg.rebuild_stats)
+    dup_pairs = find_near_duplicates(hashes["phash"], cfg.dup_max_distance)
+    groups = [[int(r.a), int(r.b)] for r in dup_pairs.itertuples()]
+
+    train_idx, val_idx = make_split(labels, cfg.val_size, cfg.seed, groups)
+    save_split(cfg.split_path, train_idx, val_idx, train["file_name"], cfg.val_size, cfg.seed, groups)
+
+    _header(f"STEP 7 - Train/val split (official train set, val_size={cfg.val_size}, seed={cfg.seed})")
+    n = len(labels)
+    print(f"Official train: {n}  ->  train {len(train_idx)} ({len(train_idx) / n:.1%})  +  "
+          f"val {len(val_idx)} ({len(val_idx) / n:.1%})")
+    print(f"Duplicate pairs kept on the same side: {len(groups)}")
+    for a, b in groups:
+        side = "val" if a in set(val_idx) else "train"
+        print(f"  rows {a} + {b} ({names[labels[a]]}) -> both in {side}")
+
+    tr_counts = Counter(labels[i] for i in train_idx)
+    va_counts = Counter(labels[i] for i in val_idx)
+    tr_per_class = [tr_counts[c] for c in range(len(names))]
+    va_per_class = [va_counts[c] for c in range(len(names))]
+    _header("Images per class")
+    print(f"{'part':<7}{'min':>5}{'max':>5}{'mean':>7}   classes with N images")
+    for part, per in [("train", tr_per_class), ("val", va_per_class)]:
+        hist = dict(sorted(Counter(per).items()))
+        print(f"{part:<7}{min(per):>5}{max(per):>5}{np.mean(per):>7.2f}   {hist}")
+    val_share = [v / (t + v) for t, v in zip(tr_per_class, va_per_class)]
+    print(f"\nVal share per class: min {min(val_share):.1%}, max {max(val_share):.1%} (target {cfg.val_size:.0%})")
+
+    _header("Checks")
+    train_set, val_set = set(train_idx), set(val_idx)
+    checks = [
+        ("train and val do not overlap", not (train_set & val_set)),
+        ("train + val cover every row exactly once", len(train_set | val_set) == n == len(train_idx) + len(val_idx)),
+        ("every class appears in val", len(va_counts) == len(names)),
+        ("duplicate pairs are on the same side", all((a in val_set) == (b in val_set) for a, b in groups)),
+        ("same seed gives the same split", make_split(labels, cfg.val_size, cfg.seed, groups) == (train_idx, val_idx)),
+        ("saved file reads back identically", load_split(cfg.split_path) == (train_idx, val_idx)),
+    ]
+    for text, ok in checks:
+        print(f"  [{'PASS' if ok else 'FAIL'}] {text}")
+
+    out = plot_split_distribution(tr_per_class, va_per_class, Path(cfg.figures_dir) / "step07_split_distribution.png")
+    _header("Files")
+    for p in [Path(cfg.split_path), out]:
+        print(f"  {p}")
+
+
 STEPS = {
     1: step1_inspect,
     2: step2_class_distribution,
@@ -511,4 +568,5 @@ STEPS = {
     4: step4_duplicates,
     5: step5_samples,
     6: step6_captions,
+    7: step7_split,
 }

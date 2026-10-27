@@ -1,0 +1,34 @@
+
+========================================================================
+STEP 7 - Train/val split (official train set, val_size=0.15, seed=42)
+========================================================================
+Official train: 5994  ->  train 5095 (85.0%)  +  val 899 (15.0%)
+Duplicate pairs kept on the same side: 3
+  rows 1712 + 1731 (Pigeon Guillemot) -> both in train
+  rows 5315 + 5333 (Swainson Warbler) -> both in train
+  rows 46 + 57 (Laysan Albatross) -> both in train
+
+========================================================================
+Images per class
+========================================================================
+part     min  max   mean   classes with N images
+train     25   26  25.48   {25: 105, 26: 95}
+val        4    5   4.50   {4: 101, 5: 99}
+
+Val share per class: min 13.3%, max 16.7% (target 15%)
+
+========================================================================
+Checks
+========================================================================
+  [PASS] train and val do not overlap
+  [PASS] train + val cover every row exactly once
+  [PASS] every class appears in val
+  [PASS] duplicate pairs are on the same side
+  [PASS] same seed gives the same split
+  [PASS] saved file reads back identically
+
+========================================================================
+Files
+========================================================================
+  data\splits\split.json
+  outputs\figures\eda\step07_split_distribution.png
