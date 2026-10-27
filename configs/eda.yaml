@@ -1,0 +1,8 @@
+# Settings for: python -m src.cli eda --config configs/eda.yaml --step N
+# The EDA uses the official TRAIN set only. The test set is not loaded until final evaluation.
+train_name: Multimodal-Fatima/CUB_train
+cache_dir: data/hf_cache          # downloaded dataset (gitignored)
+figures_dir: outputs/figures/eda  # every EDA figure: stepNN_*.png
+
+seed: 42
+n_inspect: 3                      # step 1: how many full records to print
