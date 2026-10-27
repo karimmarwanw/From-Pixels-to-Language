@@ -9,3 +9,8 @@ outputs/**/*.pt
 outputs/**/*.pth
 outputs/**/*.ckpt
 outputs/**/*.npy
+
+# Datasets, tracking, secrets
+data/hf_cache/
+mlruns/
+.env
