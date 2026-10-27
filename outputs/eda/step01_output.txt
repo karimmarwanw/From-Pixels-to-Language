@@ -1,0 +1,53 @@
+
+========================================================================
+STEP 1 - Load & inspect (official train set)
+========================================================================
+Rows:    5994
+Columns: ['image', 'description', 'label', 'file_name', 'id']
+
+Schema:
+  image        Image       Image(mode=None, decode=True)
+  description  Value       Value('string')
+  label        ClassLabel  200 classes
+  file_name    Value       Value('string')
+  id           Value       Value('int64')
+
+Class names: 200  (first 3: ['Black footed Albatross', 'Laysan Albatross', 'Sooty Albatross'], last: 'Common Yellowthroat')
+
+========================================================================
+Record 204
+========================================================================
+id:          204
+file_name:   Parakeet_Auklet_0069_795936.jpg
+label:       6 -> Parakeet Auklet
+image:       500x408 px (W x H), mode RGB, format JPEG
+description: 744 characters, 10 newline(s)
+raw (repr, so the \n separators are visible):
+  'the bird has a white eyering and a white breast and belly.\nthis bird is black white white on its chest and has a very short beak.\nthis is a bird with a white belly, black back, white eye and an orange beak.\nmedium grey and black bird with long black tarsus and webbed blue feet\nan auklet with orange beak, white eyes and brow, black head and neck, white breast spotted with black, black wings and tail.\nthis bird is black with white and has a very short beak.\nthis bird is black with a white belly, has webbed feet and a red beak.\nthis bird has a short, blunt beak and a white belly.\nthis black bird has a long neck, a short red beak, and each long foot is positioned on a short tarsus.\nthis bird has wings that are black and has a white belly\n'
+
+========================================================================
+Record 912
+========================================================================
+id:          912
+file_name:   Black_Billed_Cuckoo_0062_795309.jpg
+label:       30 -> Black billed Cuckoo
+image:       300x325 px (W x H), mode RGB, format JPEG
+description: 683 characters, 10 newline(s)
+raw (repr, so the \n separators are visible):
+  'a bird with a triangular, downward curved bill, brown head, and white breast.\nthis bird is brown with white on its belly and has a long, pointy beak.\nthis bird has a white belly and breast, with a brown crown, nape, and wing.\nbrown bird with taupe throat and white belly.\nbird with dark brown beak, brown crown, nape and wings, light brown throat, white breast, belly and abdomen\nthis bird is brown with white and has a long, pointy beak.\nthis bird has wings that are brown and has a white belly\nthis bird has a long hooked beak with a white underbelly.\nthis is a brown bird with a gray throat, white beast and white belly.\nthis bird has a long thin black bill, with a white breast.\n'
+
+========================================================================
+Record 5238
+========================================================================
+id:          5238
+file_name:   Pine_Warbler_0102_171147.jpg
+label:       174 -> Pine Warbler
+image:       500x380 px (W x H), mode RGB, format JPEG
+description: 750 characters, 10 newline(s)
+raw (repr, so the \n separators are visible):
+  'this little bird is mostly yellow with black and white wings and gray vent.\nthis bird has a yellow crown, a short black beak, and a spotted yellow breast.\nthis medium sized green bird has dark grey wings with white wingbars and a small black beak.\nbright yellow bird with grey and brown wings\nthis bird is yellow with black on its wings and has a very short beak.\nthis bird has yellow feathers, grey speckled secondaries, a long bill, and thin legs.\nthis lime green bird has black wings and a small pointed bill.\nthis bird is yellow with black and has a long, pointy beak.\nthis particular bird has a belly that is white and yellow\nthis small bird is primarily light green with spots of black on it wings and breast, it has a small pointed grey bill.\n'
+
+========================================================================
+Figure
+========================================================================
+  outputs\figures\eda\step01_records.png

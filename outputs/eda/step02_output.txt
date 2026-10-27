@@ -1,0 +1,40 @@
+
+========================================================================
+STEP 2 - Class distribution (official train set)
+========================================================================
+Classes: 200   Images: 5994
+Images per class -> min 29 | max 30 | mean 29.97 | median 30
+Imbalance ratio (max / min): 1.034
+
+========================================================================
+How many classes have N images
+========================================================================
+  29 images:   6 classes
+  30 images: 194 classes
+
+========================================================================
+6 smallest classes
+========================================================================
+ label                  class_name  count
+   106                Common Raven     29
+   125 Nelson Sharp tailed Sparrow     29
+   134                Bank Swallow     29
+   140                  Artic Tern     29
+   189     Red cockaded Woodpecker     29
+   195                  House Wren     29
+
+========================================================================
+5 largest classes
+========================================================================
+(194 classes are tied at the maximum of 30; showing the first 5 by label)
+ label             class_name  count
+     0 Black footed Albatross     30
+     1       Laysan Albatross     30
+     2        Sooty Albatross     30
+     3      Groove billed Ani     30
+     4         Crested Auklet     30
+
+========================================================================
+Figure
+========================================================================
+  outputs\figures\eda\step02_class_distribution.png

@@ -22,6 +22,8 @@ class EDAConfig:
     tall_aspect: float = 0.5
     dark_brightness: float = 35
     bright_brightness: float = 220
+    dup_max_distance: int = 4
+    n_lookalikes: int = 4
 
 
 def load_eda_config(path: str | Path) -> EDAConfig:

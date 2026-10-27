@@ -8,17 +8,28 @@ All steps use the official TRAIN set only; the test set is never loaded.
 import random
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 from src.data.class_stats import class_counts, imbalance_summary
+from src.data.duplicates import (
+    DUPLICATE_TYPES,
+    duplicate_type,
+    exact_duplicate_groups,
+    find_near_duplicates,
+    load_or_build_hashes,
+    nearest_distances,
+)
 from src.data.image_stats import load_or_build_image_stats
 from src.data.loading import get_label_names, load_cub_split
 from src.utils.config import EDAConfig
 from src.visualization.eda import (
     plot_class_distribution,
     plot_color_modes,
+    plot_image_pairs,
     plot_image_rows,
     plot_image_sizes,
+    plot_nearest_distance,
     plot_records,
 )
 
@@ -195,8 +206,78 @@ def step3_image_properties(cfg: EDAConfig) -> None:
         print(f"  {p}")
 
 
+def step4_duplicates(cfg: EDAConfig) -> None:
+    """Exact (MD5) and near (pHash) duplicates within the official train set."""
+    train = load_cub_split(cfg.train_name, "train", cfg.cache_dir)
+    names = get_label_names(train)
+    hashes = load_or_build_hashes(train, Path(cfg.stats_dir) / "image_hashes.csv", cfg.rebuild_stats)
+
+    def describe(i: int) -> str:
+        img = train[i]["image"]
+        return f"row {i:>4}  {names[hashes.label[i]]:<26} {img.width}x{img.height}"
+
+    _header("STEP 4 - Duplicates (official train set)")
+    exact = exact_duplicate_groups(hashes)
+    print(f"Exact duplicates (identical file bytes, same MD5): {len(exact)} group(s)")
+    for g in exact:
+        print("  " + "  =  ".join(describe(i) for i in g))
+
+    near = find_near_duplicates(hashes["phash"], cfg.dup_max_distance)
+    near["same_class"] = hashes.label[near.a].to_numpy() == hashes.label[near.b].to_numpy()
+    near["type"] = [
+        duplicate_type(hashes.md5[a], hashes.md5[b], train[a]["image"].size, train[b]["image"].size)
+        for a, b in zip(near.a, near.b)
+    ]
+    _header(f"All duplicate pairs (pHash Hamming distance <= {cfg.dup_max_distance} of 64 bits)")
+    print(f"Pairs: {len(near)}   same class: {near.same_class.sum()}   different class: {(~near.same_class).sum()}")
+    for r in near.itertuples():
+        print(f"  [{r.type}] d={r.distance}:  {describe(r.a)}   ~   {describe(r.b)}")
+    involved = sorted(set(near.a) | set(near.b))
+    print(f"\nImages involved: {len(involved)}  ->  extra copies: {len(involved) - len(near)}")
+
+    _header("Duplicate pairs by type")
+    print(f"{'type':<20}{'pairs':>6}   meaning")
+    meaning = {
+        "exact": "identical file bytes (same MD5)",
+        "resized": "same photo, different width x height",
+        "edited / re-saved": "same photo and size, pixels changed (brightness/contrast or recompression)",
+    }
+    for t in DUPLICATE_TYPES:
+        print(f"{t:<20}{(near.type == t).sum():>6}   {meaning[t]}")
+    print(f"{'total':<20}{len(near):>6}")
+
+    nearest = nearest_distances(hashes["phash"])
+    _header("Distance from each image to its most similar other image")
+    for d, n in zip(*np.unique(nearest, return_counts=True)):
+        if d <= cfg.dup_max_distance + 6:
+            print(f"  distance {d:>2}: {n:>5} images")
+    print(f"  median: {np.median(nearest):.0f} bits  -> a typical image is far from every other image")
+
+    lookalikes = find_near_duplicates(hashes["phash"], cfg.dup_max_distance + 4)
+    lookalikes = lookalikes[lookalikes.distance > cfg.dup_max_distance].head(cfg.n_lookalikes)
+
+    # ------------------------------------------------------------------ figures
+    def pair(a: int, b: int, label: str) -> tuple:
+        ia, ib = train[a]["image"], train[b]["image"]
+        return (ia, ib, f"{names[hashes.label[a]]}\nrow {a} | {ia.width}x{ia.height}",
+                f"{names[hashes.label[b]]}\nrow {b} | {ib.width}x{ib.height}", label)
+
+    figs = Path(cfg.figures_dir)
+    out_dups = plot_image_pairs([pair(r.a, r.b, f"{r.type}, d = {r.distance}") for r in near.itertuples()],
+                                "Step 4 - duplicate pairs in the train set", figs / "step04_duplicate_pairs.png")
+    out_look = plot_image_pairs([pair(r.a, r.b, f"d = {r.distance}") for r in lookalikes.itertuples()],
+                                "Step 4 - closest pairs that are NOT duplicates",
+                                figs / "step04_closest_non_duplicates.png")
+    out_hist = plot_nearest_distance(nearest.tolist(), cfg.dup_max_distance, figs / "step04_nearest_distance.png")
+
+    _header("Files")
+    for p in [Path(cfg.stats_dir) / "image_hashes.csv", out_dups, out_look, out_hist]:
+        print(f"  {p}")
+
+
 STEPS = {
     1: step1_inspect,
     2: step2_class_distribution,
     3: step3_image_properties,
+    4: step4_duplicates,
 }

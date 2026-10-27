@@ -1,0 +1,43 @@
+
+========================================================================
+STEP 4 - Duplicates (official train set)
+========================================================================
+Exact duplicates (identical file bytes, same MD5): 1 group(s)
+  row 1712  Pigeon Guillemot           500x333  =  row 1731  Pigeon Guillemot           500x333
+
+========================================================================
+All duplicate pairs (pHash Hamming distance <= 4 of 64 bits)
+========================================================================
+Pairs: 3   same class: 3   different class: 0
+  [exact] d=0:  row 1712  Pigeon Guillemot           500x333   ~   row 1731  Pigeon Guillemot           500x333
+  [resized] d=0:  row 5315  Swainson Warbler           500x333   ~   row 5333  Swainson Warbler           200x133
+  [edited / re-saved] d=4:  row   46  Laysan Albatross           500x375   ~   row   57  Laysan Albatross           500x375
+
+Images involved: 6  ->  extra copies: 3
+
+========================================================================
+Duplicate pairs by type
+========================================================================
+type                 pairs   meaning
+exact                    1   identical file bytes (same MD5)
+resized                  1   same photo, different width x height
+edited / re-saved        1   same photo and size, pixels changed (brightness/contrast or recompression)
+total                    3
+
+========================================================================
+Distance from each image to its most similar other image
+========================================================================
+  distance  0:     4 images
+  distance  4:     2 images
+  distance  6:    19 images
+  distance  8:    55 images
+  distance 10:   215 images
+  median: 16 bits  -> a typical image is far from every other image
+
+========================================================================
+Files
+========================================================================
+  outputs\eda\image_hashes.csv
+  outputs\figures\eda\step04_duplicate_pairs.png
+  outputs\figures\eda\step04_closest_non_duplicates.png
+  outputs\figures\eda\step04_nearest_distance.png

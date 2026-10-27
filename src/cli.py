@@ -5,7 +5,26 @@ Usage:
 """
 
 import argparse
+import contextlib
 import logging
+import sys
+from pathlib import Path
+from typing import TextIO
+
+
+class _Tee:
+    """Write everything to several streams at once (here: the terminal and a text file)."""
+
+    def __init__(self, *streams: TextIO) -> None:
+        self.streams = streams
+
+    def write(self, text: str) -> None:
+        for s in self.streams:
+            s.write(text)
+
+    def flush(self) -> None:
+        for s in self.streams:
+            s.flush()
 
 
 def main() -> None:
@@ -27,7 +46,13 @@ def main() -> None:
 
         if args.step not in STEPS:
             parser.error(f"--step must be one of {sorted(STEPS)}")
-        STEPS[args.step](load_eda_config(args.config))
+        cfg = load_eda_config(args.config)
+        # Print to the terminal AND save the same text to outputs/eda/stepNN_output.txt
+        out_txt = Path(cfg.stats_dir) / f"step{args.step:02d}_output.txt"
+        out_txt.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_txt, "w", encoding="utf-8") as f, contextlib.redirect_stdout(_Tee(sys.stdout, f)):
+            STEPS[args.step](cfg)
+        print(f"\nThis output was also saved to {out_txt}")
 
 
 if __name__ == "__main__":

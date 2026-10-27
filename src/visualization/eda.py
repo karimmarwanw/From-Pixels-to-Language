@@ -6,6 +6,7 @@ import matplotlib
 
 matplotlib.use("Agg")  # write files only, no window (works on Kaggle/servers too)
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 from PIL.Image import Image
 
@@ -168,5 +169,44 @@ def plot_image_rows(rows: list[tuple[str, list[Image], list[str]]], suptitle: st
         axes[r][0].text(-0.08, 0.5, row_title, transform=axes[r][0].transAxes, rotation=90,
                         ha="right", va="center", fontsize=11, fontweight="bold", color=INK)
     fig.suptitle(suptitle, fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
+def plot_image_pairs(pairs: list[tuple[Image, Image, str, str, str]], suptitle: str, out_path: str | Path) -> Path:
+    """One row per pair: left image, right image, and a row label (e.g. the distance).
+
+    Args:
+        pairs: (image_a, image_b, caption_a, caption_b, row_label) per pair.
+    """
+    fig, axes = plt.subplots(len(pairs), 2, figsize=(8, 3.2 * len(pairs)), squeeze=False)
+    for r, (img_a, img_b, cap_a, cap_b, row_label) in enumerate(pairs):
+        for ax, img, cap in [(axes[r][0], img_a, cap_a), (axes[r][1], img_b, cap_b)]:
+            ax.imshow(img, cmap="gray" if img.mode == "L" else None, vmin=0, vmax=255)
+            ax.set_title(cap, fontsize=8)
+            ax.axis("off")
+        axes[r][0].text(-0.06, 0.5, row_label, transform=axes[r][0].transAxes, rotation=90,
+                        ha="right", va="center", fontsize=10, fontweight="bold", color=INK)
+    fig.suptitle(suptitle, fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
+def plot_nearest_distance(distances: list[int], max_distance: int, out_path: str | Path) -> Path:
+    """Histogram of each image's distance to its most similar other image, with the duplicate threshold."""
+    fig, ax = plt.subplots(figsize=(10, 4))
+    values, counts = np.unique(distances, return_counts=True)
+    ax.bar(values, counts, width=1.6, color=COLOR_1)
+    ax.axvline(max_distance + 0.9, color=INK_SECONDARY, lw=1.2, ls="--")
+    ax.text(max_distance + 1.2, counts.max() * 0.9, f"duplicate if distance <= {max_distance}",
+            fontsize=9, color=INK_SECONDARY)
+    for v, c in zip(values, counts):
+        if v <= max_distance + 2:
+            ax.text(v, c, str(c), ha="center", va="bottom", fontsize=9, color=INK)
+    ax.set_xlabel("pHash Hamming distance to the most similar other image (bits, 0 = identical)")
+    ax.set_ylabel("Images")
+    ax.set_title("Step 4 - how close is each image to its nearest neighbour?", loc="left",
+                 fontsize=12, fontweight="bold")
+    ax.grid(axis="y")
     fig.tight_layout()
     return _save(fig, out_path)

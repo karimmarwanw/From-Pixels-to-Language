@@ -1,0 +1,116 @@
+
+========================================================================
+STEP 3 - Image properties & quality (official train set)
+========================================================================
+Images scanned: 5994   decoded OK: 5994   formats: {'JPEG': 5994}
+
+Summary (px, bytes, brightness 0-255):
+       width  height  aspect  short_side    n_bytes  mean_brightness
+min   121.00  120.00    0.49      120.00    2621.00            18.92
+25%   492.00  333.00    1.07      333.00   69850.50            98.22
+50%   500.00  375.00    1.33      357.00   94010.50           118.80
+mean  467.62  386.25    1.26      363.93   97575.87           120.49
+75%   500.00  435.00    1.50      391.00  121762.00           141.17
+max   500.00  500.00    3.60      500.00  366826.00           244.95
+
+Images whose longest side is 500 px: 92.3%
+
+========================================================================
+Corrupted files (fail to decode)
+========================================================================
+Count: 0
+
+========================================================================
+Color modes
+========================================================================
+mode
+RGB    5990
+L         4
+
+Grayscale images (5): stored as 'L', or stored as RGB but with no color (every pixel has |R-G|,|G-B|,|R-B| <= 3):
+ index        class_name  width  height mode  max_channel_diff
+   726 Pelagic Cormorant    500     375    L                 0
+  1743   California Gull    500     375  RGB                 3
+  1868        Ivory Gull    500     326    L                 0
+  1950      Western Gull    500     281    L                 0
+  2764  Clark Nutcracker    500     500    L                 0
+
+Nearly gray (channel difference 4-20), kept as color: 6
+ index      class_name  width  height mode  max_channel_diff
+    74 Sooty Albatross    500     370  RGB                19
+   851   American Crow    500     360  RGB                19
+  1325 Northern Fulmar    500     333  RGB                10
+  2407 Pied Kingfisher    500     375  RGB                15
+  2557    Pacific Loon    430     500  RGB                18
+  2576    Pacific Loon    478     500  RGB                20
+
+========================================================================
+Small images (shorter side < 224 px, will be upscaled)
+========================================================================
+Count: 74 (1.2%)
+ index                     class_name  width  height mode  short_side
+  2134                Pomarine Jaeger    250     120  RGB         120
+   190                Parakeet Auklet    121     170  RGB         121
+   214              Rhinoceros Auklet    160     128  RGB         128
+   536                Spotted Catbird    177     131  RGB         131
+   520                Spotted Catbird    200     133  RGB         133
+  5333               Swainson Warbler    200     133  RGB         133
+   753                Bronzed Cowbird    208     137  RGB         137
+  4957          Golden winged Warbler    140     139  RGB         139
+  5590 American Three toed Woodpecker    500     139  RGB         139
+  4505             Black capped Vireo    197     139  RGB         139
+
+========================================================================
+Extreme aspect ratios (wide: > 2.0, tall: < 0.5)
+========================================================================
+Very wide: 15
+ index                     class_name  width  height mode  aspect
+  5590 American Three toed Woodpecker    500     139  RGB    3.60
+  1075               Northern Flicker    500     211  RGB    2.37
+    87                Sooty Albatross    500     217  RGB    2.30
+  2276                Dark eyed Junco    500     222  RGB    2.25
+  4561             Philadelphia Vireo    500     224  RGB    2.23
+
+Very tall: 1
+ index         class_name  width  height mode  aspect
+  3228 White necked Raven    244     500  RGB    0.49
+
+========================================================================
+Very dark (< 35) and very bright (> 220); mean pixel value, 0 = black, 255 = white
+========================================================================
+Very dark: 14
+ index                class_name  width  height mode  mean_brightness
+  4270              Caspian Tern    500     377  RGB             18.9
+  2010 Ruby throated Hummingbird    500     400  RGB             20.6
+  2062        Rufous Hummingbird    500     333  RGB             20.6
+  5024          Kentucky Warbler    500     333  RGB             23.0
+  1982          Anna Hummingbird    500     375  RGB             23.0
+
+Very bright: 29
+ index             class_name  width  height mode  mean_brightness
+  1196 Olive sided Flycatcher    500     334  RGB            244.9
+  2615     Western Meadowlark    333     500  RGB            242.3
+  1241   Vermilion Flycatcher    401     500  RGB            240.8
+  3529          House Sparrow    500     496  RGB            233.7
+  3888           Tree Sparrow    500     485  RGB            233.7
+
+========================================================================
+Summary: unusual images (official train set)
+========================================================================
+category                       count   share   rule
+Corrupted (cannot be opened)       0    0.0%   fails to decode
+Grayscale                          5    0.1%   mode L, or RGB with channel difference <= 3
+Small                             74    1.2%   shorter side < 224 px
+Very wide                         15    0.3%   aspect > 2.0
+Very tall                          1    0.0%   aspect < 0.5
+Very dark                         14    0.2%   mean brightness < 35
+Very bright                       29    0.5%   mean brightness > 220
+Any of the above (unique)        133    2.2%   an image can be in several categories
+
+========================================================================
+Files
+========================================================================
+  outputs\eda\image_stats.csv
+  outputs\figures\eda\step03_image_sizes.png
+  outputs\figures\eda\step03_color_modes.png
+  outputs\figures\eda\step03_unusual_images.png
