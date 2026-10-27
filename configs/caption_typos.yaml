@@ -1,0 +1,60 @@
+# Hand-checked typo map for caption cleaning (EDA step 9).
+#
+# How it was built: every word NOT in an English dictionary (pyspellchecker) that occurs
+# at least 5 times in the captions of the 85% TRAIN part (data/splits/split.json) -> 70
+# candidates. Each was checked by reading it in its sentences. Only clear, unambiguous
+# misspellings are mapped. The spellchecker's own suggestions were NOT used (most were
+# wrong, e.g. eyering -> "eyeing", rectrices -> "restricts", beek -> "been").
+# Words rarer than 5 occurrences are left as they are (they become <unk> in the M2 vocabulary).
+
+typos:
+  # misspellings of bird-anatomy terms
+  retrices: rectrices        # tail feathers
+  rectices: rectrices
+  retricies: rectrices
+  rectricles: rectrices
+  recticles: rectrices
+  retricles: rectrices
+  supercillary: superciliary # stripe above the eye
+  supercilliary: superciliary
+  supercilary: superciliary
+  larsus: tarsus             # leg ("grey larsus and feet")
+  tarus: tarsus
+  covarts: coverts
+  eyebrown: eyebrow          # "black eyebrown", "the eyebrown is a yellow color"
+  # misspellings of common words
+  bil: bill
+  beek: beak
+  beack: beak
+  whtie: white
+  hwite: white
+  bely: belly
+  bellt: belly
+  blck: black
+  balck: black
+  bornw: brown
+  yelow: yellow
+  yello: yellow
+  corwn: crown
+  cheeck: cheek
+  smal: small
+  poitned: pointed
+  plummage: plumage
+  irridescent: iridescent
+  redish: reddish
+  adn: and
+  iwth: with
+  hs: has                    # "this bird hs a black neck"
+  wi: with                   # "a small puffy bird wi a brown under belly"
+  thats: that's
+  # two words written together (the replacement may contain a space)
+  witha: with a
+  withwhite: with white
+  withblack: with black
+  yellowbill: yellow bill    # "has a yellowbill"
+
+# Checked and deliberately KEPT as they are (correct bird vocabulary or valid variants):
+#   wingbars, wingbar, eyering, eyerings, rectrices, rectrice, superciliary, superciliaries,
+#   undertail, uppertail, tarsuses, tailfeathers, tailfeather, cheekpatch, eyepatch, eyestripe,
+#   eyeline, winglets, downturned, needlelike, squatty, spikey, orangish, orangeish, whiteish,
+#   multi / tri / ish (pieces of "multi-colored", "tri-colored", "white-ish" after hyphens are split)

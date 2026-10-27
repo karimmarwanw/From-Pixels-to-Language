@@ -1,0 +1,84 @@
+
+========================================================================
+STEP 9 - Cleaning (official train set)  |  Part 1: images -> RGB
+========================================================================
+Modes before: {'RGB': 5990, 'L': 4}
+After .convert('RGB'): 5994 of 5994 images are 3-channel RGB
+Failed to load: 0   not RGB after conversion: 0
+No image is removed or changed on disk: the conversion runs every time an image is loaded.
+
+========================================================================
+Part 2: captions  |  typo map: 41 hand-checked entries (configs/caption_typos.yaml)
+========================================================================
+rule                                            affected
+2. broken spaces repaired (U+FFFD)                    27
+4. captions that had punctuation removed          49,270
+5. typo words replaced                               928
+6. captions dropped: fewer than 2 words                1
+7. captions dropped: repeat within the same image       650
+
+========================================================================
+Before vs after
+========================================================================
+                                            before     after
+captions                                    59,940    59,289
+images with exactly 10 captions              5,994     5,402
+images with at least 1 caption               5,994     5,994
+captions containing U+FFFD                      27         0
+captions containing punctuation             49,270         0
+vocabulary size (distinct tokens)            4,067     4,038
+dictionary-unknown token occurrences         7,716     7,341
+
+Captions per image after cleaning: {7: 1, 8: 57, 9: 534, 10: 5402}
+
+========================================================================
+Before -> after examples
+========================================================================
+[broken spaces] image 195
+  before: "this��bird��has��a��black��body��and��white��belly,��a��slender��white��cheek��patch��originating��from��it's��eyes,��and��a��short,��rounded,��orange��bill."
+  after:  "this bird has a black body and white belly a slender white cheek patch originating from it's eyes and a short rounded orange bill"
+[& -> and] image 82
+  before: 'very large bird with a large wingspan, has a curved beak and is black & dark grey all over.'
+  after:  'very large bird with a large wingspan has a curved beak and is black and dark grey all over'
+[hyphen split] image 5
+  before: 'this bird has very wide-reacing wingbars and secondaries. the breast is white and it has a dark yellow bill.'
+  after:  'this bird has very wide reacing wingbars and secondaries the breast is white and it has a dark yellow bill'
+[comma without space] image 20
+  before: 'bird has brown body feathers,brown breast feather, and thick beak'
+  after:  'bird has brown body feathers brown breast feather and thick beak'
+[number kept] image 57
+  before: 'this is a large bird with a white head, neck, breast and belly. it has a grey eyepatch. the bill is large and pointed down at the tip, it is orange and is about 2.5 times as long as the head'
+  after:  'this is a large bird with a white head neck breast and belly it has a grey eyepatch the bill is large and pointed down at the tip it is orange and is about 2.5 times as long as the head'
+[backtick apostrophe] image 3603
+  before: '`a small bird with a small bill and black eyes'
+  after:  'a small bird with a small bill and black eyes'
+[typo: retrices] image 17
+  before: 'the bird has a very dark grey crown, coverts, retrices and throat.'
+  after:  'the bird has a very dark grey crown coverts rectrices and throat'
+[typo: supercillary] image 7
+  before: 'a brown bird with white on the supercillary and a brown bill'
+  after:  'a brown bird with white on the superciliary and a brown bill'
+[typo: whtie] image 122
+  before: 'a bird with a short rounded orange bill, stark whtie eye with white brown, and feathered point coming off its superciliary.'
+  after:  'a bird with a short rounded orange bill stark white eye with white brown and feathered point coming off its superciliary'
+[typo: witha] image 43
+  before: 'a bird that looks like it is partly feathers and partly fur and is grey witha large beak.'
+  after:  'a bird that looks like it is partly feathers and partly fur and is grey with a large beak'
+
+[repeats removed] image 4667 (White eyed Vireo): 10 captions -> 7
+  the head of the bird is grey it has yellow around the eye and around the small black beak the wings are grey and yellow and the belly is yellow
+  a small multicolored bird with a yellow body and a blue gray head with a yellow face
+  this bird is yellow and black in color with a small beak and black eye rings
+  the bird has a grey crown and a yellow breast and belly
+  this bird has a yellow side belly and abdomen with the rest of it's body in grey color
+  this bird has wings that are black and has a yellow belly
+  this bird has a grey crown brown primaries and a yellow belly
+
+[too short dropped] image 1171: 'this' removed -> 9 captions left
+
+========================================================================
+Files
+========================================================================
+  data\processed\captions.json
+  outputs\figures\eda\step09_cleaning_examples.png
+  outputs\figures\eda\step09_captions_per_image.png

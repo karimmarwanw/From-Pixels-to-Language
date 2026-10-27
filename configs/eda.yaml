@@ -44,6 +44,10 @@ image_size: 224                     # step 8: images are resized to this before 
 stats_path: data/processed/stats.json  # step 8: fitted mean/std, loaded later by training
 imagenet_mean: [0.485, 0.456, 0.406]   # step 8: standard ImageNet values used by torchvision pretrained models
 imagenet_std: [0.229, 0.224, 0.225]
+typo_map_path: configs/caption_typos.yaml     # step 9: hand-checked typo map (built from the train part)
+min_caption_words: 2                          # step 9: captions shorter than this are dropped ("this")
+captions_path: data/processed/captions.json   # step 9: cleaned captions of the official train set
+
 normalization: imagenet           # DECIDED (option A): both scratch and transfer models use ImageNet mean/std,
                                   # so they get identical inputs and the comparison isolates pretraining.
                                   # Evidence: CUB stats (stats.json) are close to ImageNet's (max mean diff +0.04).

@@ -5,15 +5,27 @@ src/data/ and src/visualization/ and print what they find, so printing is fine h
 All steps use the official TRAIN set only; the test set is never loaded.
 """
 
+import json
 import random
 import textwrap
 from collections import Counter
+from io import BytesIO
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
+from datasets import Image as HFImage
+from PIL import Image as PILImage
 
-from src.data.captions import caption_table, tokenize
+from src.data.captions import (
+    caption_table,
+    clean_caption,
+    clean_description,
+    load_typo_map,
+    remove_punctuation,
+    repair_encoding,
+    tokenize,
+)
 from src.data.class_stats import class_counts, imbalance_summary
 from src.data.duplicates import (
     DUPLICATE_TYPES,
@@ -594,6 +606,145 @@ def step8_normalization(cfg: EDAConfig) -> None:
         print(f"  {p}")
 
 
+def step9_cleaning(cfg: EDAConfig) -> None:
+    """Clean the official train set: images -> RGB (verified), captions -> cleaned lists, saved to JSON."""
+    from spellchecker import SpellChecker  # only steps 6 and 9 need it
+
+    train =load_cub_split(cfg.train_name, "train", cfg.cache_dir)
+    names = get_label_names(train)
+    descriptions = train["description"]
+    figs = Path(cfg.figures_dir)
+
+    # ------------------------------------------------------------------ images
+    _header("STEP 9 - Cleaning (official train set)  |  Part 1: images -> RGB")
+    raw = train.select_columns(["image"]).cast_column("image", HFImage(decode=False))
+    modes_before, failed, not_rgb_after = Counter(), [], []
+    for i, rec in enumerate(raw):
+        try:
+            with PILImage.open(BytesIO(rec["image"]["bytes"])) as img:
+                modes_before[img.mode] += 1
+                rgb = img.convert("RGB")
+                if rgb.mode != "RGB" or len(rgb.getbands()) != 3:
+                    not_rgb_after.append(i)
+        except Exception as exc:  # recorded, not raised
+            failed.append((i, repr(exc)))
+    print(f"Modes before: {dict(modes_before)}")
+    print(f"After .convert('RGB'): {len(raw) - len(not_rgb_after) - len(failed)} of {len(raw)} images are 3-channel RGB")
+    print(f"Failed to load: {len(failed)}   not RGB after conversion: {len(not_rgb_after)}")
+    print("No image is removed or changed on disk: the conversion runs every time an image is loaded.")
+
+    # ---------------------------------------------------------------- captions
+    typo_map = load_typo_map(cfg.typo_map_path)
+    _header(f"Part 2: captions  |  typo map: {len(typo_map)} hand-checked entries ({cfg.typo_map_path})")
+    before = caption_table(descriptions)
+    cleaned = [clean_description(d, typo_map, cfg.min_caption_words) for d in descriptions]
+    after = pd.DataFrame([{"image": i, "caption": c} for i, caps in enumerate(cleaned) for c in caps])
+
+    # what each rule removed / changed, counted on the same captions
+    repaired = before.caption.str.contains("�").sum()
+    per_caption = [clean_caption(c, typo_map) for c in before.caption]
+    too_short = sum(len(c.split()) < cfg.min_caption_words for c in per_caption)
+    typo_fixes = sum(w in typo_map for c in before.caption
+                     for w in remove_punctuation(repair_encoding(c).lower()).split())
+    with_punct = before.caption.str.contains(r"[^\w\s']").sum()
+    repeats_removed = len(before) - too_short - len(after)
+
+    print(f"{'rule':<46}{'affected':>10}")
+    for rule, n in [
+        ("2. broken spaces repaired (U+FFFD)", repaired),
+        ("4. captions that had punctuation removed", with_punct),
+        ("5. typo words replaced", typo_fixes),
+        (f"6. captions dropped: fewer than {cfg.min_caption_words} words", too_short),
+        ("7. captions dropped: repeat within the same image", repeats_removed),
+    ]:
+        print(f"{rule:<46}{n:>10,}")
+
+    spell = SpellChecker()
+
+    def vocab_stats(texts: list[str], tok) -> tuple[int, int, int]:
+        words = Counter(w for t in texts for w in tok(t))
+        unknown = sum(n for w, n in words.items() if not w[0].isdigit() and w not in spell)
+        return len(words), sum(words.values()), unknown
+
+    v_before = vocab_stats(before.caption.tolist(), tokenize)
+    v_after = vocab_stats(after.caption.tolist(), str.split)
+    per_image_after = after.groupby("image").size().reindex(range(len(descriptions)), fill_value=0)
+
+    _header("Before vs after")
+    rows = [
+        ("captions", len(before), len(after)),
+        ("images with exactly 10 captions", int((before.groupby('image').size() == 10).sum()), int((per_image_after == 10).sum())),
+        ("images with at least 1 caption", before.image.nunique(), int((per_image_after > 0).sum())),
+        ("captions containing U+FFFD", repaired, int(after.caption.str.contains("�").sum())),
+        ("captions containing punctuation", with_punct, int(after.caption.str.contains(r"[^\w\s'.]").sum())),
+        ("vocabulary size (distinct tokens)", v_before[0], v_after[0]),
+        ("dictionary-unknown token occurrences", v_before[2], v_after[2]),
+    ]
+    print(f"{'':<40}{'before':>10}{'after':>10}")
+    for label, b, a in rows:
+        print(f"{label:<40}{b:>10,}{a:>10,}")
+    print(f"\nCaptions per image after cleaning: {dict(sorted(per_image_after.value_counts().items()))}")
+
+    # ------------------------------------------------------------ examples
+    _header("Before -> after examples")
+    picks = []  # (rule, image index, raw caption)
+
+    def first(mask, rule):
+        hit = before[mask].iloc[0]
+        picks.append((rule, int(hit.image), hit.caption))
+
+    first(before.caption.str.contains("�"), "broken spaces")
+    first(before.caption.str.contains("&"), "& -> and")
+    first(before.caption.str.contains(r"\w-\w"), "hyphen split")
+    first(before.caption.str.contains(r",\S"), "comma without space")
+    first(before.caption.str.contains(r"\d"), "number kept")
+    first(before.caption.str.contains("`"), "backtick apostrophe")
+    for w in ["retrices", "supercillary", "whtie", "witha"]:
+        first(before.caption.apply(lambda c, w=w: w in tokenize(c)), f"typo: {w}")
+    example_lines = []
+    for rule, i, cap in picks:
+        new = clean_caption(cap, typo_map)
+        print(f"[{rule}] image {i}\n  before: {cap!r}\n  after:  {new!r}")
+        example_lines += [(f"[{rule}]  image {i}", False), ("before: " + cap, True), ("after:  " + new, False), ("", False)]
+
+    rep_img = int((before.groupby("image").size() - per_image_after.reindex(before.image.unique())).idxmax())
+    print(f"\n[repeats removed] image {rep_img} ({names[train[rep_img]['label']]}): "
+          f"{(before.image == rep_img).sum()} captions -> {len(cleaned[rep_img])}")
+    for c in cleaned[rep_img]:
+        print(f"  {c}")
+    short_img = int(before[before.n_words < cfg.min_caption_words].image.iloc[0])
+    print(f"\n[too short dropped] image {short_img}: 'this' removed -> {len(cleaned[short_img])} captions left")
+
+    # ---------------------------------------------------------------- save
+    out_json = Path(cfg.captions_path)
+    out_json.parent.mkdir(parents=True, exist_ok=True)
+    out_json.write_text(json.dumps({
+        "source": "official CUB train set (Multimodal-Fatima/CUB_train); index = row of that dataset",
+        "cleaning": "split -> repair U+FFFD -> lowercase -> remove punctuation (keep words, numbers, "
+                    "apostrophes) -> typo map -> drop < min_words -> drop repeats within an image",
+        "typo_map": cfg.typo_map_path,
+        "min_words": cfg.min_caption_words,
+        "file_names": list(train["file_name"]),  # list(): the datasets column object is not JSON-serializable
+        "captions": cleaned,
+    }, indent=1), encoding="utf-8")
+
+    # ------------------------------------------------------------- figures
+    outs = [plot_text_rows(
+        [("Each cleaning rule on a real caption (orange = raw, black = cleaned)", None, example_lines),
+         (f"Repeats removed: image {rep_img} - {names[train[rep_img]['label']]}", train[rep_img]["image"],
+          [(f"{(before.image == rep_img).sum()} raw captions -> {len(cleaned[rep_img])} after cleaning:", False)]
+          + [(c, False) for c in cleaned[rep_img]])],
+        "Step 9 - caption cleaning: before and after", figs / "step09_cleaning_examples.png")]
+    counts = per_image_after.value_counts().sort_index()
+    outs.append(plot_word_bars([("Images per number of captions after cleaning",
+                                 [(f"{k} captions", int(v)) for k, v in counts.iloc[::-1].items()])],
+                               "Step 9 - captions per image after cleaning", figs / "step09_captions_per_image.png"))
+
+    _header("Files")
+    for p in [out_json, *outs]:
+        print(f"  {p}")
+
+
 STEPS = {
     1: step1_inspect,
     2: step2_class_distribution,
@@ -603,4 +754,5 @@ STEPS = {
     6: step6_captions,
     7: step7_split,
     8: step8_normalization,
+    9: step9_cleaning,
 }

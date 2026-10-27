@@ -42,6 +42,9 @@ class EDAConfig:
     imagenet_mean: list[float] = field(default_factory=lambda: [0.485, 0.456, 0.406])
     imagenet_std: list[float] = field(default_factory=lambda: [0.229, 0.224, 0.225])
     normalization: str = "imagenet"  # "imagenet" or "dataset" (values from stats_path)
+    typo_map_path: str = "configs/caption_typos.yaml"
+    min_caption_words: int = 2
+    captions_path: str = "data/processed/captions.json"
 
 
 def load_eda_config(path: str | Path) -> EDAConfig:
