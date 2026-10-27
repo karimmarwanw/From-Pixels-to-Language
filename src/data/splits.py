@@ -17,24 +17,26 @@ logger = logging.getLogger(__name__)
 
 def make_stratified_split(
     labels: Sequence[int],
-    val_fraction: float,
+    val_per_class: int,
     seed: int,
 ) -> tuple[list[int], list[int]]:
-    """Split row indices into train/val, keeping each class's proportion.
+    """Split row indices into train/val with the same number of val images per class.
 
-    For every class, its indices are shuffled with a seeded RNG and
-    round(val_fraction * n_class) of them go to val (at least 1).
+    For every class, its indices are shuffled with a seeded RNG and the first
+    val_per_class go to val; the rest stay in train. A fixed count (rather than
+    a fraction) gives a perfectly balanced val set, since CUB has 29-30 train
+    images per class.
 
     Args:
         labels: class label of each row of the official train set.
-        val_fraction: share of each class to put in val, e.g. 0.15.
+        val_per_class: number of images of each class to put in val, e.g. 5.
         seed: RNG seed, so the split is identical on every machine.
 
     Returns:
         (train_indices, val_indices), both sorted, disjoint, covering all rows.
     """
-    if not 0.0 < val_fraction < 1.0:
-        raise ValueError(f"val_fraction must be in (0, 1), got {val_fraction}")
+    if val_per_class < 1:
+        raise ValueError(f"val_per_class must be >= 1, got {val_per_class}")
 
     labels = np.asarray(labels)
     rng = np.random.default_rng(seed)
@@ -43,14 +45,16 @@ def make_stratified_split(
 
     for cls in np.unique(labels):
         cls_idx = np.flatnonzero(labels == cls)
+        if len(cls_idx) <= val_per_class:
+            raise ValueError(
+                f"class {cls} has {len(cls_idx)} images, not enough for {val_per_class} val + 1 train"
+            )
         rng.shuffle(cls_idx)
-        # floor(x + 0.5) instead of round(): Python's round(4.5) == 4 (banker's rounding)
-        n_val = max(1, int(np.floor(val_fraction * len(cls_idx) + 0.5)))
-        val_idx.extend(cls_idx[:n_val].tolist())
-        train_idx.extend(cls_idx[n_val:].tolist())
+        val_idx.extend(cls_idx[:val_per_class].tolist())
+        train_idx.extend(cls_idx[val_per_class:].tolist())
 
-    logger.info("Split: %d train, %d val (val_fraction=%.2f, seed=%d)",
-                len(train_idx), len(val_idx), val_fraction, seed)
+    logger.info("Split: %d train, %d val (val_per_class=%d, seed=%d)",
+                len(train_idx), len(val_idx), val_per_class, seed)
     return sorted(train_idx), sorted(val_idx)
 
 
@@ -58,14 +62,14 @@ def save_split(
     path: str | Path,
     train_idx: list[int],
     val_idx: list[int],
-    val_fraction: float,
+    val_per_class: int,
     seed: int,
 ) -> None:
     """Write the split (plus the settings that produced it) to JSON."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = {
-        "val_fraction": val_fraction,
+        "val_per_class": val_per_class,
         "seed": seed,
         "n_train": len(train_idx),
         "n_val": len(val_idx),
