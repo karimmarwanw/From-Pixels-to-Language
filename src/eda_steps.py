@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
+from src.data.captions import caption_table, tokenize
 from src.data.class_stats import class_counts, imbalance_summary
 from src.data.duplicates import (
     DUPLICATE_TYPES,
@@ -25,6 +26,7 @@ from src.data.image_stats import load_or_build_image_stats
 from src.data.loading import get_label_names, load_cub_split
 from src.utils.config import EDAConfig
 from src.visualization.eda import (
+    plot_caption_lengths,
     plot_class_distribution,
     plot_color_modes,
     plot_image_grid,
@@ -33,6 +35,9 @@ from src.visualization.eda import (
     plot_image_sizes,
     plot_nearest_distance,
     plot_records,
+    plot_text_rows,
+    plot_word_bars,
+    plot_word_frequency,
 )
 
 
@@ -328,10 +333,182 @@ def step5_samples(cfg: EDAConfig) -> None:
         print(f"  {p}")
 
 
+def step6_captions(cfg: EDAConfig) -> None:
+    """Captions: count per image, duplicates, lengths, vocabulary, characters, typos, color/body words."""
+    from spellchecker import SpellChecker  # only this step needs it
+
+    train = load_cub_split(cfg.train_name, "train", cfg.cache_dir)
+    descriptions = train["description"]  # text column only, no images decoded
+    caps = caption_table(descriptions)
+    figs = Path(cfg.figures_dir)
+
+    # ------------------------------------------------------------ 1. structure
+    _header("STEP 6 - Caption analysis (official train set)")
+    raw_lines = pd.Series([len(d.split("\n")) for d in descriptions])
+    per_image = caps.groupby("image").size().reindex(range(len(descriptions)), fill_value=0)
+    print(f"Images: {len(descriptions)}   captions (non-empty): {len(caps)}")
+    print(f"Raw lines per description (split on \\n): {raw_lines.value_counts().to_dict()}")
+    print(f"Descriptions ending with \\n: {sum(d.endswith(chr(10)) for d in descriptions)}  "
+          "-> the last split piece is always an empty string")
+    print(f"Non-empty captions per image: {per_image.value_counts().to_dict()}")
+    not_ten = per_image[per_image != 10]
+    print(f"Images WITHOUT exactly 10 captions: {len(not_ten)}" + (f" -> {not_ten.to_dict()}" if len(not_ten) else ""))
+    print(f"Captions containing uppercase letters: {(caps.caption != caps.caption.str.lower()).sum()}")
+
+    # ------------------------------------------------------------ 2. duplicates
+    _header("Duplicate captions")
+    dup_in_image = caps.groupby("image")["caption"].apply(lambda s: len(s) - s.nunique())
+    print(f"Images with a repeated caption: {(dup_in_image > 0).sum()}  "
+          f"(repeats per image: {dup_in_image[dup_in_image > 0].value_counts().sort_index().to_dict()})")
+    print(f"Repeated captions within images (extra copies): {dup_in_image.sum()}")
+    ex = dup_in_image[dup_in_image > 0].index[0]
+    rep = caps[caps.image == ex].caption.value_counts()
+    print(f"  example, image {ex}: {rep[rep > 1].index[0]!r} x{rep.iloc[0]}")
+    distinct = caps.caption.nunique()
+    print(f"\nDistinct captions in the whole set: {distinct} of {len(caps)} ({distinct / len(caps):.1%})")
+    print("Most repeated captions across images (template-like):")
+    for text, n in caps.caption.value_counts().head(10).items():
+        print(f"  {n:>4} x  {text!r}")
+
+    # --------------------------------------------------------------- 3. length
+    _header("Caption length")
+    for col, unit in [("n_words", "words"), ("n_chars", "characters")]:
+        q = caps[col].quantile([0.95, 0.99])
+        print(f"{unit:<11} min {caps[col].min():>3} | median {caps[col].median():>4.0f} | mean {caps[col].mean():>5.1f} | "
+              f"95th pct {q[0.95]:>4.0f} | 99th pct {q[0.99]:>4.0f} | max {caps[col].max():>3}")
+    print("\nShortest captions:")
+    for c in caps.nsmallest(5, "n_words").caption:
+        print(f"  {c!r}")
+    print("Longest caption:")
+    print(f"  {caps.loc[caps.n_words.idxmax(), 'caption']!r}")
+
+    # ----------------------------------------------------------- 4. vocabulary
+    _header("Vocabulary (words = lowercase letters with optional apostrophe; digits/punctuation excluded)")
+    words = pd.Series([w for c in caps.caption for w in tokenize(c)]).value_counts()
+    print(f"Word occurrences (tokens): {words.sum():,}   distinct words (vocabulary): {len(words):,}")
+    print(f"Words seen once: {(words == 1).sum():,}   twice: {(words == 2).sum():,}   "
+          f"-> {((words <= 2).sum()) / len(words):.0%} of the vocabulary is rare")
+    print(f"\n{'min frequency':<16}{'vocab size':>11}{'tokens covered':>16}")
+    vocab_sizes = []
+    for t in cfg.min_freq_options:
+        kept = words[words >= t]
+        vocab_sizes.append(len(kept))
+        print(f">= {t:<13}{len(kept):>11,}{kept.sum() / words.sum():>16.2%}")
+    print(f"\nTop {cfg.n_top_words} words:")
+    print("  " + ", ".join(f"{w} ({n})" for w, n in words.head(cfg.n_top_words).items()))
+
+    # ----------------------------------------------------------- 5. characters
+    _header("Characters")
+    text = "".join(caps.caption)
+    punct = pd.Series([ch for ch in text if not ch.isalnum() and ch != " "]).value_counts()
+    print("Punctuation / symbols: " + ", ".join(f"{ch!r} {n}" for ch, n in punct.items()))
+    broken = caps[caps.caption.str.contains("�")]
+    print(f"\nCaptions with the replacement character U+FFFD (broken encoding): {len(broken)} "
+          f"({text.count(chr(0xFFFD))} characters)")
+    if len(broken):
+        print(f"  example (repr): {broken.caption.iloc[0][:80]!r}...")
+        print("  pattern: every space was replaced by two U+FFFD characters -> the words are intact")
+    other = pd.Series([ch for ch in text if ord(ch) > 127 and ch != "�"]).value_counts()
+    print(f"Other non-ASCII characters: {other.to_dict() if len(other) else 'none'}")
+    digits = caps[caps.caption.str.contains(r"\d")]
+    print(f"Captions with digits: {len(digits)}, e.g. {digits.caption.iloc[0][-60:]!r}" if len(digits) else "Digits: none")
+
+    # ---------------------------------------------------------------- 6. typos
+    _header("Possible typos (words not in an English dictionary, pyspellchecker)")
+    spell = SpellChecker()
+    unknown = words[[w not in spell for w in words.index]]
+    print(f"Unknown words: {len(unknown):,} distinct, {unknown.sum():,} occurrences "
+          f"({unknown.sum() / words.sum():.2%} of all tokens)")
+    print("\nMost frequent unknown words (bird vocabulary AND its misspellings):")
+    print("  " + ", ".join(f"{w} ({n})" for w, n in unknown.head(30).items()))
+    print("\nRare unknown words with the spellchecker's suggestion (NOT applied; many are wrong):")
+    for w in unknown[unknown <= 2].index[:15]:
+        example = next(c for c in caps.caption if w in tokenize(c))
+        print(f"  {w:<14} -> {str(spell.correction(w)):<12} in {example[:70]!r}")
+
+    # ------------------------------------------------------ 7. color/body words
+    _header("Color words and body-part words")
+    colors = [(w, int(words.get(w, 0))) for w in cfg.color_words]
+    parts = [(w, int(words.get(w, 0))) for w in cfg.body_part_words]
+    colors.sort(key=lambda x: -x[1])
+    parts.sort(key=lambda x: -x[1])
+    print("Colors:     " + ", ".join(f"{w} ({n})" for w, n in colors))
+    print("Body parts: " + ", ".join(f"{w} ({n})" for w, n in parts))
+    has_color = caps.caption.apply(lambda c: any(w in cfg.color_words for w in tokenize(c)))
+    print(f"\nCaptions mentioning at least one color word: {has_color.mean():.1%}")
+
+    # -------------------------------------------------------------- figures
+    content = words[[w not in cfg.stop_words for w in words.index]]
+    outs = [
+        plot_caption_lengths(caps.n_words, caps.n_chars, figs / "step06_caption_lengths.png"),
+        plot_word_bars(
+            [(f"Top {cfg.n_top_words} words", list(words.head(cfg.n_top_words).items())),
+             (f"Top {cfg.n_top_words} content words (stop words removed)", list(content.head(cfg.n_top_words).items()))],
+            "Step 6 - most frequent words in the captions", figs / "step06_top_words.png"),
+        plot_word_bars([("Color words", colors), ("Body-part words", parts)],
+                       "Step 6 - what the captions talk about", figs / "step06_color_bodypart_words.png"),
+        plot_word_frequency(words.tolist(), cfg.min_freq_options, vocab_sizes, figs / "step06_word_frequency.png"),
+    ]
+
+    # ------------------------------------------- examples of what needs fixing
+    names = get_label_names(train)
+    rows = []
+    if len(broken):
+        b = broken.iloc[0]
+        rows.append((f"1. Broken encoding: {len(broken)} captions (spaces became U+FFFD)", train[int(b.image)]["image"], [
+            (f"image {b.image} - {names[train[int(b.image)]['label']]}", False),
+            ("raw:      " + b.caption, True),
+            ("repaired: " + " ".join(b.caption.replace("�", " ").split()), False),
+        ]))
+    rep_img = int(dup_in_image.idxmax())  # the image with the most repeats
+    rep_caps = caps[caps.image == rep_img].caption.tolist()
+    counts = pd.Series(rep_caps).value_counts()
+    rows.append((f"2. Repeated within one image: {(dup_in_image > 0).sum()} images, {dup_in_image.sum()} extra copies",
+                 train[rep_img]["image"],
+                 [(f"image {rep_img} - {names[train[rep_img]['label']]} - its 10 captions:", False)]
+                 + [(f"{k + 1:>2}. {c}" + (f"   <- appears {counts[c]}x" if counts[c] > 1 else ""), counts[c] > 1)
+                    for k, c in enumerate(rep_caps)]))
+    short = caps[caps.n_words < 2]
+    for _, s_row in short.iterrows():
+        rows.append((f"3. Cut-off caption ({len(short)})", train[int(s_row.image)]["image"],
+                     [(f"image {s_row.image} - {names[train[int(s_row.image)]['label']]}", False),
+                      (f"caption: {s_row.caption!r}", True),
+                      ("other captions of the same image, for comparison:", False)]
+                     + [(f"   {c}", False) for c in caps[caps.image == s_row.image].caption.head(3)]))
+    typo_lines = [("word        sentence it appears in", False)]
+    for w in cfg.typo_examples:
+        hit = next((c for c in caps.caption if w in tokenize(c)), None)
+        if hit is not None:
+            typo_lines.append((f"{w:<11} {hit}  ({int(words.get(w, 0))}x in total)", True))
+    rows.append((f"4. Typos: {len(unknown):,} words not in a dictionary ({unknown.sum() / words.sum():.2%} of words)",
+                 None, typo_lines))
+    outs.append(plot_text_rows(rows, "Step 6 - caption problems found in the official train set",
+                               figs / "step06_caption_problems.png"))
+
+    template = caps.caption.value_counts().index[0]
+    holders = caps[caps.caption == template].image.drop_duplicates()
+    picked, seen = [], set()
+    for i in holders:  # one image per species, to show it is used for different birds
+        lbl = train[int(i)]["label"]
+        if lbl not in seen:
+            seen.add(lbl)
+            picked.append(int(i))
+        if len(picked) == cfg.n_template_examples:
+            break
+    outs.append(plot_image_rows(
+        [(f"{len(holders)} images", [train[i]["image"] for i in picked],
+          [f"{names[train[i]['label']]}\nimage {i}" for i in picked])],
+        f'Step 6 - the same caption on different birds: "{template}"', figs / "step06_template_captions.png"))
+    _header("Files")
+    for p in outs:
+        print(f"  {p}")
+
+
 STEPS = {
     1: step1_inspect,
     2: step2_class_distribution,
     3: step3_image_properties,
     4: step4_duplicates,
     5: step5_samples,
+    6: step6_captions,
 }

@@ -25,3 +25,14 @@ n_samples: 16                     # step 5: random images in the sample grid
 sample_cols: 4                    # step 5: columns of the sample grid
 similar_groups: [Gull, Tern]      # step 5: one row per word; shows every species whose name contains it
 caption_wrap: 40                  # step 5: characters per line when drawing captions under images
+
+n_top_words: 30                   # step 6: most frequent words to print / plot
+min_freq_options: [1, 2, 3, 5, 10]  # step 6: vocabulary size if words rarer than this are dropped (M2 choice)
+stop_words: [a, an, the, this, that, bird, has, have, and, with, is, are, of, its, it, it's, "on", to, in, very, as, at, which]
+                                  # step 6: ignored in the "top content words" chart only
+                                  # ("on" is quoted: unquoted, YAML reads it as the boolean True)
+color_words: [black, white, brown, grey, gray, yellow, red, orange, blue, green, tan, buff, olive, pink, purple, golden, cream, rust]
+body_part_words: [wings, wing, belly, breast, head, crown, bill, beak, tail, throat, nape, back, eyering, feet, tarsus, rectrices,
+                  primaries, secondaries, superciliary, wingbars, crest, neck, cheek, abdomen, eyebrow, eye, eyes, feathers]
+typo_examples: [whtie, bil, beek, retrices, supercillary, witha]  # step 6: typos to SHOW in the problems figure
+n_template_examples: 5            # step 6: different birds shown with the same template caption

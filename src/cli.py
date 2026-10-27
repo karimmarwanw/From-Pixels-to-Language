@@ -36,6 +36,7 @@ def main() -> None:
     eda.add_argument("--step", type=int, required=True, help="EDA step number to run")
 
     args = parser.parse_args()
+    sys.stdout.reconfigure(encoding="utf-8")  # captions contain characters the Windows console codepage cannot print
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     for noisy in ("httpx", "httpx2"):  # the HF hub logs one line per HTTP request
         logging.getLogger(noisy).setLevel(logging.WARNING)

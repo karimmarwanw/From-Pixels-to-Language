@@ -1,0 +1,115 @@
+
+========================================================================
+STEP 6 - Caption analysis (official train set)
+========================================================================
+Images: 5994   captions (non-empty): 59940
+Raw lines per description (split on \n): {11: 5994}
+Descriptions ending with \n: 5994  -> the last split piece is always an empty string
+Non-empty captions per image: {10: 5994}
+Images WITHOUT exactly 10 captions: 0
+Captions containing uppercase letters: 0
+
+========================================================================
+Duplicate captions
+========================================================================
+Images with a repeated caption: 583  (repeats per image: {1: 528, 2: 54, 3: 1})
+Repeated captions within images (extra copies): 639
+  example, image 20: 'this bird is brown with white and has a long, pointy beak.' x3
+
+Distinct captions in the whole set: 50477 of 59940 (84.2%)
+Most repeated captions across images (template-like):
+   601 x  'this bird has wings that are brown and has a white belly'
+   446 x  'this bird has wings that are black and has a white belly'
+   288 x  'this bird has a speckled belly and breast with a short pointy bill.'
+   255 x  'this bird has wings that are grey and has a white belly'
+   218 x  'this bird is brown with white and has a very short beak.'
+   198 x  'this bird has wings that are black and has a yellow belly'
+   176 x  'this bird is brown with white and has a long, pointy beak.'
+   157 x  'this bird is black with white and has a long, pointy beak.'
+   129 x  'this bird has wings that are black and has a thick bill'
+   114 x  'this bird is white with black and has a long, pointy beak.'
+
+========================================================================
+Caption length
+========================================================================
+words       min   1 | median   14 | mean  15.3 | 95th pct   24 | 99th pct   32 | max  66
+characters  min   4 | median   70 | mean  77.5 | 95th pct  129 | 99th pct  168 | max 332
+
+Shortest captions:
+  'this'
+  'the colorful bird'
+  'a large black bird.'
+  'this bird is all black.'
+  'this bird is completely black.'
+Longest caption:
+  'this is a grayish bird with a stripe of black that extends from the top of its head through the eyes to the tip of the beak and down its neck along with a hint of white in the face, black, white, tan and pink wings, a black and yellow-tipped tail, and a round body with hints of reddish brown in the face and tail.'
+
+========================================================================
+Vocabulary (words = lowercase letters with optional apostrophe; digits/punctuation excluded)
+========================================================================
+Word occurrences (tokens): 915,938   distinct words (vocabulary): 4,067
+Words seen once: 1,867   twice: 568   -> 60% of the vocabulary is rare
+
+min frequency    vocab size  tokens covered
+>= 1                  4,067         100.00%
+>= 2                  2,200          99.80%
+>= 3                  1,632          99.67%
+>= 5                  1,240          99.53%
+>= 10                   877          99.26%
+
+Top 30 words:
+  a (90704), and (82990), bird (58798), with (40957), has (40560), black (39789), this (37815), white (33207), brown (21772), is (20969), beak (18714), belly (17426), small (16860), wings (15907), yellow (15774), the (15470), bill (14701), long (10939), grey (10563), breast (10204), crown (10148), that (10055), head (9760), its (8161), are (7374), orange (7248), short (7106), on (7091), gray (6953), red (6819)
+
+========================================================================
+Characters
+========================================================================
+Punctuation / symbols: ',' 52467, '.' 47305, '-' 1879, "'" 1690, '�' 848, '/' 266, ';' 247, '&' 196, '"' 47, '(' 25, ')' 25, ':' 13, '!' 4, '?' 4, '`' 4, '=' 1
+
+Captions with the replacement character U+FFFD (broken encoding): 27 (848 characters)
+  example (repr): 'this��bird��has��a��black��body��and��white��belly,��a��slender��white��cheek��p'...
+  pattern: every space was replaced by two U+FFFD characters -> the words are intact
+Other non-ASCII characters: none
+Captions with digits: 65, e.g. 'tip, it is orange and is about 2.5 times as long as the head'
+
+========================================================================
+Possible typos (words not in an English dictionary, pyspellchecker)
+========================================================================
+Unknown words: 793 distinct, 7,716 occurrences (0.84% of all tokens)
+
+Most frequent unknown words (bird vocabulary AND its misspellings):
+  wingbars (1703), eyering (1409), rectrices (779), superciliary (635), retrices (332), wingbar (301), eyerings (206), undertail (166), multi (165), tarsuses (79), supercillary (68), bil (65), tailfeathers (42), cheekpatch (42), rectrice (41), superciliaries (40), retrice (34), supercilliary (34), uppertail (30), beek (29), orangish (29), larsus (29), retricies (27), rectices (26), winglets (25), whtie (23), rectricles (23), eyepatch (20), recticles (20), ish (18)
+
+Rare unknown words with the spellchecker's suggestion (NOT applied; many are wrong):
+  hgas           -> has          in 'this bird has wings that are grey and hgas a long bill'
+  vey            -> very         in 'a solid black bird with long tail feathers and a rounded beak that loo'
+  beka           -> beta         in 'this is a black bird with a white belly and a red beka.'
+  whispy         -> whisky       in "this bird has long whispy white feathers on it's face."
+  metalic        -> metallic     in 'the bird has a black head with an oily metalic black look to the rest '
+  bleu           -> blue         in 'this bird has wings that are black and has a bleu crown'
+  tand           -> and          in 'birds beak is small and flat black head and feet are small secondaries'
+  abrown         -> brown        in 'this bird has a grey belly and breast with abrown crown and short poin'
+  thie           -> the          in 'thie grey bird has yellow eyes with black pupils, a pointed black beak'
+  bellyl         -> belly        in 'the bird has a yellow breast as well as a black bellyl.'
+  baige          -> badge        in 'this distinctive bird has a light baige colored crown that turns to je'
+  bluie          -> blue         in 'a bright bluie bird whos top half of its beak is black and the other p'
+  whos           -> who          in 'a bright bluie bird whos top half of its beak is black and the other p'
+  eyecatching    -> None         in 'an eyecatching royal blue small bird that has a little bit of black on'
+  thorat         -> throat       in 'a bird with a skinny body, orange and white belly, black primary and s'
+
+========================================================================
+Color words and body-part words
+========================================================================
+Colors:     black (39789), white (33207), brown (21772), yellow (15774), grey (10563), orange (7248), gray (6953), red (6819), blue (4801), green (3453), tan (1571), pink (573), cream (394), purple (273), golden (166), rust (143), olive (76), buff (18)
+Body parts: beak (18714), belly (17426), wings (15907), bill (14701), breast (10204), crown (10148), head (9760), feathers (5591), throat (5075), tail (4298), back (3698), feet (3566), eyes (2929), eye (2834), neck (2647), wing (2335), nape (2019), tarsus (1734), wingbars (1703), secondaries (1638), cheek (1424), eyering (1409), primaries (1392), abdomen (1291), eyebrow (881), rectrices (779), superciliary (635), crest (263)
+
+Captions mentioning at least one color word: 97.6%
+
+========================================================================
+Files
+========================================================================
+  outputs\figures\eda\step06_caption_lengths.png
+  outputs\figures\eda\step06_top_words.png
+  outputs\figures\eda\step06_color_bodypart_words.png
+  outputs\figures\eda\step06_word_frequency.png
+  outputs\figures\eda\step06_caption_problems.png
+  outputs\figures\eda\step06_template_captions.png

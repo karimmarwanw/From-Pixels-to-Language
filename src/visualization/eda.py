@@ -12,6 +12,7 @@ from PIL.Image import Image
 
 # Shared look for all EDA figures: one main series color, quiet axes and grid, dark text.
 COLOR_1 = "#2a78d6"
+COLOR_2 = "#eb6834"  # highlight color (e.g. problems in text)
 INK = "#0b0b0b"
 INK_SECONDARY = "#52514e"
 GRID = "#e1e0d9"
@@ -223,4 +224,104 @@ def plot_image_grid(images: list[Image], titles: list[str], n_cols: int, suptitl
         ax.set_title(title, fontsize=8, loc="left")
     fig.suptitle(suptitle, fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
     fig.tight_layout(rect=(0, 0, 1, 0.975))  # leave room so the suptitle does not cover the first row
+    return _save(fig, out_path)
+
+
+def plot_caption_lengths(n_words: pd.Series, n_chars: pd.Series, out_path: str | Path) -> Path:
+    """Histograms of caption length in words and in characters, with the 95th percentile marked."""
+    fig, axes = plt.subplots(1, 2, figsize=(14, 4.2))
+    for ax, values, unit, bins in [(axes[0], n_words, "words", range(0, int(n_words.max()) + 2)),
+                                   (axes[1], n_chars, "characters", 60)]:
+        ax.hist(values, bins=bins, color=COLOR_1)
+        p95 = values.quantile(0.95)
+        ax.axvline(p95, color=INK_SECONDARY, lw=1.2, ls="--")
+        ax.text(p95, ax.get_ylim()[1] * 0.92, f" 95% of captions <= {p95:.0f}", fontsize=9, color=INK_SECONDARY)
+        ax.set_xlabel(f"Caption length ({unit})")
+        ax.set_ylabel("Captions")
+        ax.set_title(f"Length in {unit}: median {values.median():.0f}, max {values.max():.0f}", loc="left")
+        ax.grid(axis="y")
+    fig.suptitle("Step 6 - caption lengths (official train set)", fontsize=13, fontweight="bold",
+                 color=INK, x=0.01, ha="left")
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
+def plot_word_bars(panels: list[tuple[str, list[tuple[str, int]]]], suptitle: str, out_path: str | Path) -> Path:
+    """Side-by-side horizontal bar charts of word counts, most frequent at the top.
+
+    Args:
+        panels: (panel title, [(word, count), ...]) per panel.
+    """
+    n_max = max(len(words) for _, words in panels)
+    fig, axes = plt.subplots(1, len(panels), figsize=(6 * len(panels), 0.26 * n_max + 1.5), squeeze=False)
+    for ax, (title, words) in zip(axes[0], panels):
+        labels, counts = zip(*words)
+        ax.barh(range(len(words)), counts, height=0.7, color=COLOR_1)
+        ax.set_yticks(range(len(words)), labels, fontsize=9)
+        ax.invert_yaxis()
+        ax.set_xlabel("Occurrences")
+        ax.set_title(title, loc="left")
+        ax.grid(axis="x")
+    fig.suptitle(suptitle, fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
+def plot_word_frequency(counts: list[int], thresholds: list[int], vocab_sizes: list[int], out_path: str | Path) -> Path:
+    """Left: rank vs frequency of every word (log-log). Right: vocabulary size for each min-frequency."""
+    fig, (ax_rank, ax_vocab) = plt.subplots(1, 2, figsize=(14, 4.2))
+    freqs = sorted(counts, reverse=True)
+    ax_rank.loglog(range(1, len(freqs) + 1), freqs, color=COLOR_1, lw=2)
+    ax_rank.set_xlabel("Word rank (1 = most frequent)")
+    ax_rank.set_ylabel("Occurrences")
+    ax_rank.set_title(f"{len(freqs):,} distinct words: a few are very common, most are rare", loc="left")
+    ax_rank.grid(True, which="major")
+
+    ax_vocab.bar(range(len(thresholds)), vocab_sizes, width=0.6, color=COLOR_1)
+    ax_vocab.set_xticks(range(len(thresholds)), [f">= {t}" for t in thresholds])
+    for i, v in enumerate(vocab_sizes):
+        ax_vocab.text(i, v, f"{v:,}", ha="center", va="bottom", fontsize=9, color=INK)
+    ax_vocab.set_xlabel("Keep words that occur at least ... times")
+    ax_vocab.set_ylabel("Vocabulary size")
+    ax_vocab.set_title("Vocabulary size vs minimum word frequency", loc="left")
+    ax_vocab.grid(axis="y")
+    fig.suptitle("Step 6 - word frequencies (official train set)", fontsize=13, fontweight="bold",
+                 color=INK, x=0.01, ha="left")
+    fig.tight_layout()
+    return _save(fig, out_path)
+
+
+def plot_text_rows(
+    rows: list[tuple[str, Image | None, list[tuple[str, bool]]]], suptitle: str, out_path: str | Path, wrap: int = 95
+) -> Path:
+    """One row per example: an optional image on the left, lines of text on the right.
+
+    Args:
+        rows: (row title, image or None, [(text line, highlight?), ...]). Highlighted lines are drawn
+            in the highlight color and bold, so the problem stands out.
+        wrap: characters per text line before wrapping.
+    """
+    import textwrap
+
+    heights = [max(2.6, 0.24 * sum(len(textwrap.wrap(t, wrap)) or 1 for t, _ in lines) + 0.8) for _, _, lines in rows]
+    fig = plt.figure(figsize=(15, sum(heights)))
+    grid = fig.add_gridspec(len(rows), 2, height_ratios=heights, width_ratios=[1, 3.2])
+    for r, (title, img, lines) in enumerate(rows):
+        ax_img = fig.add_subplot(grid[r, 0])
+        ax_img.axis("off")
+        if img is not None:
+            ax_img.imshow(img, cmap="gray" if img.mode == "L" else None, vmin=0, vmax=255)
+        ax_txt = fig.add_subplot(grid[r, 1])
+        ax_txt.axis("off")
+        ax_txt.set_title(title, loc="left", fontsize=12, fontweight="bold", color=INK)
+        y = 0.98
+        step = 1.0 / max(1, sum(len(textwrap.wrap(t, wrap)) or 1 for t, _ in lines) + 1)
+        for text, highlight in lines:
+            for k, chunk in enumerate(textwrap.wrap(text, wrap) or [""]):
+                ax_txt.text(0.0, y, chunk if k == 0 else "    " + chunk, transform=ax_txt.transAxes, va="top",
+                            fontsize=9.5, family="monospace", color=COLOR_2 if highlight else INK,
+                            fontweight="bold" if highlight else "normal")
+                y -= step
+    fig.suptitle(suptitle, fontsize=14, fontweight="bold", color=INK, x=0.01, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.98))
     return _save(fig, out_path)

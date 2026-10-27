@@ -28,6 +28,13 @@ class EDAConfig:
     sample_cols: int = 4
     similar_groups: list[str] = field(default_factory=lambda: ["Gull", "Tern"])
     caption_wrap: int = 40
+    n_top_words: int = 30
+    min_freq_options: list[int] = field(default_factory=lambda: [1, 2, 3, 5, 10])
+    stop_words: list[str] = field(default_factory=list)
+    color_words: list[str] = field(default_factory=list)
+    body_part_words: list[str] = field(default_factory=list)
+    typo_examples: list[str] = field(default_factory=list)
+    n_template_examples: int = 5
 
 
 def load_eda_config(path: str | Path) -> EDAConfig:
