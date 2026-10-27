@@ -48,6 +48,18 @@ typo_map_path: configs/caption_typos.yaml     # step 9: hand-checked typo map (b
 min_caption_words: 2                          # step 9: captions shorter than this are dropped ("this")
 captions_path: data/processed/captions.json   # step 9: cleaned captions of the official train set
 
+# step 10: augmentation (train) and fixed preprocessing (val/test)
+resize_size: 256                  # eval: resize short side to this, then center crop image_size (224)
+crop_scale: [0.5, 1.0]            # train: RandomResizedCrop keeps 50-100% of the image area (bird rarely cut out)
+hflip_p: 0.5                      # train: horizontal flip probability (birds face both ways)
+rotation_deg: 15                  # train: rotation in [-15, +15] degrees (no vertical flip)
+brightness: 0.2                   # train: mild brightness jitter (lighting varies, step 3)
+contrast: 0.2                     # train: mild contrast jitter; hue/saturation are NEVER changed (color = species cue)
+aug_example_images: [204, 5238, 4837]   # rows of the train official set shown with augmentations
+eval_example_images: [204, 5590, 3228, 190]  # typical, very wide, very tall, small (from step 3)
+n_aug_examples: 7                 # augmented versions shown per image
+n_sanity_images: 256              # random train-part images pushed through both transforms as a check
+
 normalization: imagenet           # DECIDED (option A): both scratch and transfer models use ImageNet mean/std,
                                   # so they get identical inputs and the comparison isolates pretraining.
                                   # Evidence: CUB stats (stats.json) are close to ImageNet's (max mean diff +0.04).

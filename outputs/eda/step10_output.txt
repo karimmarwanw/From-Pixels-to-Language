@@ -1,0 +1,48 @@
+
+========================================================================
+STEP 10 - Augmentation  |  normalization: imagenet (mean [0.485, 0.456, 0.406], std [0.229, 0.224, 0.225])
+========================================================================
+TRAIN transform (random, new every time an image is loaded):
+  ToRGB()
+  RandomResizedCrop(size=(224, 224), scale=(0.5, 1.0), ratio=(0.75, 1.3333), interpolation=bilinear, antialias=True)
+  RandomHorizontalFlip(p=0.5)
+  RandomRotation(degrees=[-15.0, 15.0], interpolation=nearest, expand=False, fill=(124, 116, 104))
+  ColorJitter(brightness=(0.8, 1.2), contrast=(0.8, 1.2), saturation=None, hue=None)
+  ToTensor()
+  Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
+VAL / TEST transform (fixed, identical every time):
+  ToRGB()
+  Resize(size=256, interpolation=bilinear, max_size=None, antialias=True)
+  CenterCrop(size=(224, 224))
+  ToTensor()
+  Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+
+========================================================================
+Why each augmentation is used or rejected
+========================================================================
+USED:
+  + RandomResizedCrop               scale [0.5, 1.0]  bird size/position varies; images ~500x375 -> 224 (steps 3, 5); min scale 0.5 so the bird is rarely cropped out
+  + RandomHorizontalFlip            p=0.5             birds face left or right; a mirrored bird is the same species
+  + RandomRotation                  +-15 deg          tilted camera / perched at an angle; corners filled with the mean color
+  + ColorJitter brightness/contrast 0.2/0.2           lighting varies a lot: 14 very dark, 29 very bright images (step 3)
+REJECTED:
+  - RandomVerticalFlip              birds are never upside down; would create unrealistic images
+  - Hue / saturation jitter         color separates look-alike species (gull bills, warbler throats; steps 5-6); 97.6% of captions mention a color
+  - RandomGrayscale                 removes color, the key cue; only 5 of 5994 train images are gray
+  - Strong crops (scale < 0.5)      a small bird in a big frame (very bright images, step 3) could be cut out
+  - Large rotations                 birds are photographed roughly upright; large angles are unrealistic
+
+========================================================================
+Sanity check: what the model actually receives
+========================================================================
+train transform  batch (256, 3, 224, 224) torch.float32  per-channel mean -0.02, +0.14, +0.02  std 1.01, 0.99, 1.13
+eval transform   batch (256, 3, 224, 224) torch.float32  per-channel mean -0.02, +0.14, +0.02  std 1.00, 0.98, 1.13
+(random 256 train-part images; step 8 predicted, for the whole train part, means of about -0.00, +0.19, +0.12 and stds of about 0.99, 0.99, 1.16)
+
+========================================================================
+Files
+========================================================================
+  outputs\figures\eda\step10_train_augmentations.png
+  outputs\figures\eda\step10_geometric_only.png
+  outputs\figures\eda\step10_eval_transform.png

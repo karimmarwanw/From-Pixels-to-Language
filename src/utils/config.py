@@ -45,6 +45,16 @@ class EDAConfig:
     typo_map_path: str = "configs/caption_typos.yaml"
     min_caption_words: int = 2
     captions_path: str = "data/processed/captions.json"
+    resize_size: int = 256
+    crop_scale: list[float] = field(default_factory=lambda: [0.5, 1.0])
+    hflip_p: float = 0.5
+    rotation_deg: float = 15
+    brightness: float = 0.2
+    contrast: float = 0.2
+    aug_example_images: list[int] = field(default_factory=lambda: [204, 5238, 4837])
+    eval_example_images: list[int] = field(default_factory=lambda: [204, 5590, 3228, 190])
+    n_aug_examples: int = 7
+    n_sanity_images: int = 256
 
 
 def load_eda_config(path: str | Path) -> EDAConfig:

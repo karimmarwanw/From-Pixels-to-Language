@@ -37,8 +37,9 @@ from src.data.duplicates import (
 )
 from src.data.image_stats import load_or_build_image_stats
 from src.data.loading import get_label_names, load_cub_split
-from src.data.normalization import compute_channel_stats, save_stats
+from src.data.normalization import compute_channel_stats, load_stats, save_stats
 from src.data.split import load_split, make_split, save_split
+from src.data.transforms import build_eval_transform, build_train_transform
 from src.utils.config import EDAConfig
 from src.visualization.eda import (
     plot_caption_lengths,
@@ -745,6 +746,97 @@ def step9_cleaning(cfg: EDAConfig) -> None:
         print(f"  {p}")
 
 
+def step10_augmentation(cfg: EDAConfig) -> None:
+    """Build train/eval transforms, justify each augmentation, and show them on real images."""
+    import torch
+
+    train = load_cub_split(cfg.train_name, "train", cfg.cache_dir)
+    names = get_label_names(train)
+    mean, std = (cfg.imagenet_mean, cfg.imagenet_std) if cfg.normalization == "imagenet" else load_stats(cfg.stats_path)
+    aug = dict(crop_scale=cfg.crop_scale, hflip_p=cfg.hflip_p, rotation_deg=cfg.rotation_deg,
+               brightness=cfg.brightness, contrast=cfg.contrast)
+    train_tf = build_train_transform(cfg.image_size, mean, std, **aug)
+    eval_tf = build_eval_transform(cfg.image_size, cfg.resize_size, mean, std)
+
+    _header(f"STEP 10 - Augmentation  |  normalization: {cfg.normalization} (mean {mean}, std {std})")
+    print("TRAIN transform (random, new every time an image is loaded):")
+    print("  " + "\n  ".join(str(t) for t in train_tf.transforms))
+    print("\nVAL / TEST transform (fixed, identical every time):")
+    print("  " + "\n  ".join(str(t) for t in eval_tf.transforms))
+
+    _header("Why each augmentation is used or rejected")
+    used = [
+        ("RandomResizedCrop", f"scale {cfg.crop_scale}", "bird size/position varies; images ~500x375 -> 224 (steps 3, 5); "
+                                                         "min scale 0.5 so the bird is rarely cropped out"),
+        ("RandomHorizontalFlip", f"p={cfg.hflip_p}", "birds face left or right; a mirrored bird is the same species"),
+        ("RandomRotation", f"+-{cfg.rotation_deg} deg", "tilted camera / perched at an angle; corners filled with the mean color"),
+        ("ColorJitter brightness/contrast", f"{cfg.brightness}/{cfg.contrast}",
+         "lighting varies a lot: 14 very dark, 29 very bright images (step 3)"),
+    ]
+    rejected = [
+        ("RandomVerticalFlip", "birds are never upside down; would create unrealistic images"),
+        ("Hue / saturation jitter", "color separates look-alike species (gull bills, warbler throats; steps 5-6); "
+                                    "97.6% of captions mention a color"),
+        ("RandomGrayscale", "removes color, the key cue; only 5 of 5994 train images are gray"),
+        ("Strong crops (scale < 0.5)", "a small bird in a big frame (very bright images, step 3) could be cut out"),
+        ("Large rotations", "birds are photographed roughly upright; large angles are unrealistic"),
+    ]
+    print("USED:")
+    for name, setting, why in used:
+        print(f"  + {name:<32}{setting:<18}{why}")
+    print("REJECTED:")
+    for name, why in rejected:
+        print(f"  - {name:<32}{why}")
+
+    _header("Sanity check: what the model actually receives")
+    train_idx, _ = load_split(cfg.split_path)
+    # A RANDOM sample: rows are sorted by species, so the first rows are all sea birds on blue backgrounds.
+    picked = random.Random(cfg.seed).sample(train_idx, cfg.n_sanity_images)
+    sample = [train[int(i)]["image"] for i in picked]
+    x_train = torch.stack([train_tf(img) for img in sample])  # (n, 3, 224, 224)
+    x_eval = torch.stack([eval_tf(img) for img in sample])
+    for label, x in [("train transform", x_train), ("eval transform", x_eval)]:
+        m = x.mean(dim=(0, 2, 3)).tolist()
+        s = x.std(dim=(0, 2, 3)).tolist()
+        print(f"{label:<16} batch {tuple(x.shape)} {x.dtype}  per-channel mean "
+              + ", ".join(f"{v:+.2f}" for v in m) + "  std " + ", ".join(f"{v:.2f}" for v in s))
+    print(f"(random {cfg.n_sanity_images} train-part images; step 8 predicted, for the whole train part, means of about "
+          "-0.00, +0.19, +0.12 and stds of about 0.99, 0.99, 1.16)")
+
+    # ------------------------------------------------------------- figures
+    figs = Path(cfg.figures_dir)
+    torch.manual_seed(cfg.seed)  # same random augmentations on every run
+    show_train = build_train_transform(cfg.image_size, mean, std, **aug, to_tensor=False)
+    show_geo = build_train_transform(cfg.image_size, mean, std, **aug, color_jitter=False, to_tensor=False)
+    show_eval = build_eval_transform(cfg.image_size, cfg.resize_size, mean, std, to_tensor=False)
+
+    def aug_rows(tf, ids):
+        rows = []
+        for i in ids:
+            img = train[i]["image"]
+            rows.append((names[train[i]["label"]],
+                         [img] + [tf(img) for _ in range(cfg.n_aug_examples)],
+                         [f"original {img.width}x{img.height}"] + [f"augmented {k + 1}" for k in range(cfg.n_aug_examples)]))
+        return rows
+
+    outs = [
+        plot_image_rows(aug_rows(show_train, cfg.aug_example_images),
+                        "Step 10 - train augmentation: original + random versions (crop, flip, rotate, light)",
+                        figs / "step10_train_augmentations.png"),
+        plot_image_rows(aug_rows(show_geo, cfg.aug_example_images[:1]),
+                        "Step 10 - geometric-only variant (no color change)", figs / "step10_geometric_only.png"),
+        plot_image_rows([(f"row {i}", [train[i]["image"], show_eval(train[i]["image"])],
+                          [f"original {train[i]['image'].width}x{train[i]['image'].height}",
+                           f"val/test input {cfg.image_size}x{cfg.image_size}"])
+                         for i in cfg.eval_example_images],
+                        f"Step 10 - val/test preprocessing: resize short side to {cfg.resize_size}, "
+                        f"center crop {cfg.image_size}", figs / "step10_eval_transform.png"),
+    ]
+    _header("Files")
+    for p in outs:
+        print(f"  {p}")
+
+
 STEPS = {
     1: step1_inspect,
     2: step2_class_distribution,
@@ -755,4 +847,5 @@ STEPS = {
     7: step7_split,
     8: step8_normalization,
     9: step9_cleaning,
+    10: step10_augmentation,
 }
