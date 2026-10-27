@@ -25,10 +25,12 @@ from src.data.duplicates import (
 )
 from src.data.image_stats import load_or_build_image_stats
 from src.data.loading import get_label_names, load_cub_split
+from src.data.normalization import compute_channel_stats, save_stats
 from src.data.split import load_split, make_split, save_split
 from src.utils.config import EDAConfig
 from src.visualization.eda import (
     plot_caption_lengths,
+    plot_channel_stats,
     plot_class_distribution,
     plot_color_modes,
     plot_image_grid,
@@ -561,6 +563,37 @@ def step7_split(cfg: EDAConfig) -> None:
         print(f"  {p}")
 
 
+def step8_normalization(cfg: EDAConfig) -> None:
+    """Per-channel mean/std on the 85% train part only, compared with ImageNet; saved for training."""
+    train = load_cub_split(cfg.train_name, "train", cfg.cache_dir)
+    train_idx, val_idx = load_split(cfg.split_path)  # the split from step 7: only train_idx is used here
+
+    mean, std = compute_channel_stats(train, train_idx, cfg.image_size)
+    save_stats(cfg.stats_path, mean, std, computed_on=f"train part of {cfg.split_path}",
+               n_images=len(train_idx), image_size=cfg.image_size, scale="pixel / 255, RGB order")
+
+    _header(f"STEP 8 - Normalization statistics ({len(train_idx)} train images, val/test NOT used)")
+    print(f"Images used: {len(train_idx)} (train part)   excluded: {len(val_idx)} val images + the whole test set")
+    print(f"Each image: .convert('RGB') -> resize to {cfg.image_size}x{cfg.image_size} -> pixel / 255\n")
+    print(f"{'channel':<9}{'CUB mean':>10}{'ImageNet':>10}{'diff':>8}   {'CUB std':>9}{'ImageNet':>10}{'diff':>8}")
+    for c, name in enumerate(["Red", "Green", "Blue"]):
+        print(f"{name:<9}{mean[c]:>10.4f}{cfg.imagenet_mean[c]:>10.4f}{mean[c] - cfg.imagenet_mean[c]:>+8.4f}   "
+              f"{std[c]:>9.4f}{cfg.imagenet_std[c]:>10.4f}{std[c] - cfg.imagenet_std[c]:>+8.4f}")
+
+    # What a pixel looks like after normalizing with ImageNet values instead of ours:
+    shifted = [(m - im) / s for m, im, s in zip(mean, cfg.imagenet_mean, cfg.imagenet_std)]
+    scaled = [s / s_im for s, s_im in zip(std, cfg.imagenet_std)]
+    _header("If we normalized CUB images with the ImageNet values instead of CUB's own")
+    print("their average would land at " + ", ".join(f"{v:+.3f}" for v in shifted) + "  (ideal: 0, 0, 0)")
+    print("and their spread at        " + ", ".join(f"{v:.3f}" for v in scaled) + "   (ideal: 1, 1, 1)")
+
+    out = plot_channel_stats((mean, std), (cfg.imagenet_mean, cfg.imagenet_std),
+                             Path(cfg.figures_dir) / "step08_channel_stats.png")
+    _header("Files")
+    for p in [Path(cfg.stats_path), out]:
+        print(f"  {p}")
+
+
 STEPS = {
     1: step1_inspect,
     2: step2_class_distribution,
@@ -569,4 +602,5 @@ STEPS = {
     5: step5_samples,
     6: step6_captions,
     7: step7_split,
+    8: step8_normalization,
 }

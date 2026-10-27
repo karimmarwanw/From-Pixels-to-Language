@@ -364,3 +364,28 @@ def plot_split_distribution(train_counts: list[int], val_counts: list[int], out_
                  fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
     fig.tight_layout()
     return _save(fig, out_path)
+
+
+def plot_channel_stats(
+    ours: tuple[list[float], list[float]], imagenet: tuple[list[float], list[float]], out_path: str | Path
+) -> Path:
+    """Grouped bars: per-channel mean (left) and std (right), our train set vs ImageNet."""
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    x = np.arange(3)
+    w = 0.36
+    for ax, k, name in [(axes[0], 0, "Mean"), (axes[1], 1, "Std")]:
+        for offset, values, label, color in [(-w / 2, ours[k], "CUB train (85%)", COLOR_1),
+                                             (w / 2, imagenet[k], "ImageNet", COLOR_2)]:
+            ax.bar(x + offset, values, width=w, color=color, label=label)
+            for xi, v in zip(x + offset, values):
+                ax.text(xi, v, f"{v:.3f}", ha="center", va="bottom", fontsize=9, color=INK)
+        ax.set_xticks(x, ["Red", "Green", "Blue"])
+        ax.set_ylabel(f"{name} (pixel values scaled to 0-1)")
+        ax.set_ylim(0, max(max(ours[k]), max(imagenet[k])) * 1.2)
+        ax.set_title(f"{name} per color channel", loc="left")
+        ax.grid(axis="y")
+    axes[0].legend(loc="upper right")
+    fig.suptitle("Step 8 - normalization statistics: our training images vs ImageNet",
+                 fontsize=13, fontweight="bold", color=INK, x=0.01, ha="left")
+    fig.tight_layout()
+    return _save(fig, out_path)

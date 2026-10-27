@@ -1,0 +1,23 @@
+
+========================================================================
+STEP 8 - Normalization statistics (5095 train images, val/test NOT used)
+========================================================================
+Images used: 5095 (train part)   excluded: 899 val images + the whole test set
+Each image: .convert('RGB') -> resize to 224x224 -> pixel / 255
+
+channel    CUB mean  ImageNet    diff     CUB std  ImageNet    diff
+Red          0.4841    0.4850 -0.0009      0.2264    0.2290 -0.0026
+Green        0.4983    0.4560 +0.0423      0.2217    0.2240 -0.0023
+Blue         0.4321    0.4060 +0.0261      0.2604    0.2250 +0.0354
+
+========================================================================
+If we normalized CUB images with the ImageNet values instead of CUB's own
+========================================================================
+their average would land at -0.004, +0.189, +0.116  (ideal: 0, 0, 0)
+and their spread at        0.989, 0.990, 1.157   (ideal: 1, 1, 1)
+
+========================================================================
+Files
+========================================================================
+  data\processed\stats.json
+  outputs\figures\eda\step08_channel_stats.png

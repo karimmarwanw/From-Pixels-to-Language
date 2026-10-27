@@ -37,6 +37,10 @@ class EDAConfig:
     n_template_examples: int = 5
     split_path: str = "data/splits/split.json"
     val_size: float = 0.15
+    image_size: int = 224
+    stats_path: str = "data/processed/stats.json"
+    imagenet_mean: list[float] = field(default_factory=lambda: [0.485, 0.456, 0.406])
+    imagenet_std: list[float] = field(default_factory=lambda: [0.229, 0.224, 0.225])
 
 
 def load_eda_config(path: str | Path) -> EDAConfig:
