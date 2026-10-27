@@ -8,9 +8,10 @@ All steps use the official TRAIN set only; the test set is never loaded.
 import random
 from pathlib import Path
 
+from src.data.class_stats import class_counts, imbalance_summary
 from src.data.loading import get_label_names, load_cub_split
 from src.utils.config import EDAConfig
-from src.visualization.eda import plot_records
+from src.visualization.eda import plot_class_distribution, plot_records
 
 
 def _header(title: str) -> None:
@@ -54,6 +55,37 @@ def step1_inspect(cfg: EDAConfig) -> None:
     print(f"  {out}")
 
 
+def step2_class_distribution(cfg: EDAConfig) -> None:
+    """Images per class in the official train set: summary, extremes, and two plots."""
+    train = load_cub_split(cfg.train_name, "train", cfg.cache_dir)
+    counts = class_counts(train["label"], get_label_names(train))  # label column only, no images decoded
+    s = imbalance_summary(counts)
+
+    _header("STEP 2 - Class distribution (official train set)")
+    print(f"Classes: {s['classes']}   Images: {s['images']}")
+    print(f"Images per class -> min {s['min']} | max {s['max']} | mean {s['mean']:.2f} | "
+          f"median {s['median']:.0f}")
+    print(f"Imbalance ratio (max / min): {s['imbalance_ratio']:.3f}")
+
+    _header("How many classes have N images")
+    for n, k in counts["count"].value_counts().sort_index().items():
+        print(f"  {n} images: {k:>3} classes")
+
+    smallest = counts[counts["count"] == s["min"]]
+    smallest = smallest if len(smallest) > 5 else counts.tail(5)  # show every class tied at the minimum
+    _header(f"{len(smallest)} smallest classes")
+    print(smallest.sort_values("label").to_string(index=False))
+    _header("5 largest classes")
+    n_max = (counts["count"] == s["max"]).sum()
+    print(f"({n_max} classes are tied at the maximum of {s['max']}; showing the first 5 by label)")
+    print(counts.head(5).to_string(index=False))
+
+    out = plot_class_distribution(counts, Path(cfg.figures_dir) / "step02_class_distribution.png")
+    _header("Figure")
+    print(f"  {out}")
+
+
 STEPS = {
     1: step1_inspect,
+    2: step2_class_distribution,
 }
