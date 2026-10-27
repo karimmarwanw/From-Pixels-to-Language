@@ -44,3 +44,6 @@ image_size: 224                     # step 8: images are resized to this before 
 stats_path: data/processed/stats.json  # step 8: fitted mean/std, loaded later by training
 imagenet_mean: [0.485, 0.456, 0.406]   # step 8: standard ImageNet values used by torchvision pretrained models
 imagenet_std: [0.229, 0.224, 0.225]
+normalization: imagenet           # DECIDED (option A): both scratch and transfer models use ImageNet mean/std,
+                                  # so they get identical inputs and the comparison isolates pretraining.
+                                  # Evidence: CUB stats (stats.json) are close to ImageNet's (max mean diff +0.04).
