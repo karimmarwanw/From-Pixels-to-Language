@@ -1,0 +1,19 @@
+# Grid search over transfer learning stage 2 (Task 1.2 hyperparameter tuning).
+# Every combination of the values below: 3 x 2 x 2 = 12 trials. Each trial is one normal
+# training run of base_config with these settings changed, tracked in W&B group cls-tuning-grid.
+#   python -m src.cli tune --task classification --method grid --config configs/tuning/cls_grid.yaml \
+#       --override model.init_from=<stage 1 best.pt>
+base_config: configs/cls_transfer_stage2.yaml
+experiment: cls-tuning-grid
+method: grid
+
+fixed:                                # the same for every trial
+  train.epochs: 8                     # short trials: val acc flattens after ~10 epochs (Adam's stage 2 run)
+
+space:                                # the settings that control overfitting (train 99.8% vs val 79.4%)
+  optim.backbone_lr: [3.0e-5, 1.0e-4, 3.0e-4]   # encoder lr: 3x below, as now, 3x above
+  optim.weight_decay: [5.0e-4, 5.0e-3]          # as now, and 10x stronger
+  model.dropout: [0.3, 0.5]                     # as now, and stronger
+
+keep_checkpoints: false               # delete each trial's best.pt/last.pt (~550 MB) after it finishes
+results_dir: outputs/tuning           # results.csv per search lands in <results_dir>/<experiment>/

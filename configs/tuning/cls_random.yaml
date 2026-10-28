@@ -1,0 +1,23 @@
+# Random search over transfer learning stage 2 (Task 1.2 hyperparameter tuning).
+# 12 trials (same budget as the grid), each with every setting drawn at random from its range.
+# Tracked in W&B group cls-tuning-random.
+#   python -m src.cli tune --task classification --method random --config configs/tuning/cls_random.yaml \
+#       --override model.init_from=<stage 1 best.pt>
+base_config: configs/cls_transfer_stage2.yaml
+experiment: cls-tuning-random
+method: random
+n_trials: 12
+sampler_seed: 0                       # seed for DRAWING the 12 settings (training itself keeps seed 42)
+
+fixed:
+  train.epochs: 8                     # same short trials as the grid, so the two searches are comparable
+
+space:
+  # log_uniform: equal chance per order of magnitude (1e-5..1e-4 as likely as 1e-4..5e-4)
+  optim.backbone_lr: {dist: log_uniform, low: 1.0e-5, high: 5.0e-4}
+  optim.weight_decay: {dist: log_uniform, low: 1.0e-4, high: 1.0e-2}
+  model.dropout: {dist: uniform, low: 0.1, high: 0.6}
+  optim.lr: {dist: log_uniform, low: 3.0e-4, high: 3.0e-3}      # head lr: tuned by random search only
+
+keep_checkpoints: false
+results_dir: outputs/tuning

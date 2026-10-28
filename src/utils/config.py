@@ -210,6 +210,32 @@ def config_from_dict(raw: dict) -> TrainConfig:
     return _build(TrainConfig, raw, "checkpoint config")
 
 
+# ---------------------------------------------------------------------------
+# Tuning configs (python -m src.cli tune --config configs/tuning/*.yaml)
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class TuneConfig:
+    """One hyperparameter search: which settings to try, on top of a base training config."""
+
+    base_config: str  # training YAML every trial starts from, e.g. configs/cls_transfer_stage2.yaml
+    experiment: str  # W&B group + tag shared by all trials of this search, e.g. cls-tuning-grid
+    method: str  # "grid" or "random"
+    space: dict  # grid: {key: [values]}; random: {key: {dist: uniform|log_uniform, low, high}}
+    fixed: dict = field(default_factory=dict)  # overrides applied to every trial, e.g. {"train.epochs": 8}
+    n_trials: int | None = None  # random search only (a grid has one trial per combination)
+    sampler_seed: int = 0  # random search only: seed for drawing the settings, not the training seed
+    keep_checkpoints: bool = False  # False = delete each trial's best.pt/last.pt once it is logged
+    results_dir: str = "outputs/tuning"  # one results.csv per search in <results_dir>/<experiment>/
+
+
+def load_tune_config(path: str | Path) -> TuneConfig:
+    """Read a tuning YAML into a TuneConfig. Unknown keys raise an error (catches typos)."""
+    raw = yaml.safe_load(Path(path).read_text()) or {}
+    return _build(TuneConfig, raw, str(path))
+
+
 def flatten(d: dict, prefix: str = "") -> dict[str, object]:
     """{"optim": {"lr": 0.001}} -> {"optim.lr": 0.001}, for logging the config as flat params."""
     out: dict[str, object] = {}
