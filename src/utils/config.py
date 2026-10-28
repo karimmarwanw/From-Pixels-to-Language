@@ -133,7 +133,7 @@ class TrainingConfig:
 
 @dataclass
 class TrackingConfig:
-    tracking_uri: str = "mlruns"  # local folder; open with: mlflow ui --backend-store-uri ./mlruns
+    tracking_uri: str = "sqlite:///mlflow.db"  # runs in mlflow.db, artifacts in ./mlruns (see training/tracking.py)
     log_checkpoints: bool = False  # True copies .pt files into MLflow (~100 MB each for ResNet50)
 
 

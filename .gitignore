@@ -9,8 +9,11 @@ outputs/**/*.pt
 outputs/**/*.pth
 outputs/**/*.ckpt
 outputs/**/*.npy
+outputs/**/*.npz
+outputs/**/*.tmp
 
 # Datasets, tracking, secrets
 data/hf_cache/
 mlruns/
+mlflow.db
 .env

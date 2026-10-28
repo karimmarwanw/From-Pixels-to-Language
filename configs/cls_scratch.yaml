@@ -54,5 +54,5 @@ train:
   device: auto
 
 tracking:
-  tracking_uri: mlruns
+  tracking_uri: sqlite:///mlflow.db   # view: mlflow ui --backend-store-uri sqlite:///mlflow.db
   log_checkpoints: false
