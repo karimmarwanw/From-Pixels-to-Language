@@ -1,11 +1,13 @@
-"""Tests for the grid and random search trial generators (src/tuning/search.py)."""
+"""Tests for the search trial generators (src/tuning/search.py) and the search loop (src/tuning/run.py)."""
 
 import math
+from pathlib import Path
 
 import pytest
 
+from src.tuning.run import read_results, results_file, run_search, summarize
 from src.tuning.search import grid_trials, make_trials, random_trials, trial_name, trial_overrides
-from src.utils.config import load_train_config, load_tune_config
+from src.utils.config import TuneConfig, load_train_config, load_tune_config
 
 GRID = "configs/tuning/cls_grid.yaml"
 RANDOM = "configs/tuning/cls_random.yaml"
@@ -83,3 +85,82 @@ def test_trial_name():
     params = {"optim.backbone_lr": 1e-4, "optim.weight_decay": 5e-4, "model.dropout": 0.3}
     assert trial_name("grid", 3, params) == "grid-03-blr1e-4-wd5e-4-do0.3"
     assert trial_name("random", 12, {"optim.lr": 0.00237}) == "random-12-lr2.37e-3"
+
+
+# --------------------------------------------------------------------------- search loop
+# A fake train function stands in for train_classification: instant, no data, no W&B.
+
+
+def _tiny_search(tmp_path) -> TuneConfig:
+    p = tmp_path / "t.yaml"
+    p.write_text("base_config: configs/cls_transfer_stage2.yaml\nexperiment: cls-tuning-test\nmethod: grid\n"
+                 "fixed: {train.epochs: 2}\nspace: {model.dropout: [0.1, 0.2, 0.3]}\n"
+                 f"results_dir: {tmp_path / 'tuning'}\n")
+    return load_tune_config(p)
+
+
+def _fake_train(calls: list, fail_on: float | None = None):
+    def train(cfg, group=None, hf_train=None):
+        calls.append((cfg, group))
+        if cfg.model.dropout == fail_on:
+            raise FloatingPointError("Loss became nan")
+        run_dir = Path(cfg.train.checkpoint_dir) / f"{cfg.run_name}_20261029-000000"
+        run_dir.mkdir(parents=True, exist_ok=True)
+        for f in ("best.pt", "last.pt", "history.csv"):
+            (run_dir / f).write_text("x")
+        return {"best_metric": cfg.model.dropout, "best_epoch": 1, "epochs_run": cfg.train.epochs,
+                "train_time_s": 1.0, "run_id": f"id-{cfg.run_name}", "ckpt_dir": str(run_dir)}
+    return train
+
+
+def test_run_search_writes_one_row_per_trial_and_deletes_checkpoints(tmp_path):
+    cfg, calls = _tiny_search(tmp_path), []
+    extra = [f"train.checkpoint_dir={tmp_path / 'ckpt'}"]
+    out = run_search(cfg, extra, hf_train="fake", train_fn=_fake_train(calls))
+
+    rows = read_results(out)
+    assert [r["run_name"] for r in rows] == ["grid-01-do0.1", "grid-02-do0.2", "grid-03-do0.3"]
+    assert all(r["status"] == "ok" for r in rows)
+    train_cfg, group = calls[0]
+    assert group == train_cfg.experiment == "cls-tuning-test"  # all trials in one W&B group
+    assert train_cfg.run_name == "grid-01-do0.1" and train_cfg.model.dropout == 0.1
+    assert train_cfg.train.epochs == 2  # from `fixed`
+    assert not list((tmp_path / "ckpt").rglob("*.pt"))  # keep_checkpoints: false
+    assert len(list((tmp_path / "ckpt").rglob("history.csv"))) == 3  # curves are kept
+    s = summarize(out)
+    assert s["n_ok"] == 3 and s["best"]["run_name"] == "grid-03-do0.3"
+
+
+def test_run_search_resumes_without_repeating_finished_trials(tmp_path):
+    cfg, calls = _tiny_search(tmp_path), []
+    extra = [f"train.checkpoint_dir={tmp_path / 'ckpt'}"]
+    run_search(cfg, extra, max_trials=1, hf_train="fake", train_fn=_fake_train(calls))  # e.g. laptop closed
+    run_search(cfg, extra, hf_train="fake", train_fn=_fake_train(calls))  # same command again
+    assert [c[0].run_name for c in calls] == ["grid-01-do0.1", "grid-02-do0.2", "grid-03-do0.3"]
+    assert len(read_results(results_file(cfg))) == 3
+
+
+def test_failed_trial_is_recorded_and_the_search_goes_on(tmp_path):
+    cfg = _tiny_search(tmp_path)
+    extra = [f"train.checkpoint_dir={tmp_path / 'ckpt'}"]
+    out = run_search(cfg, extra, hf_train="fake", train_fn=_fake_train([], fail_on=0.2))
+    rows = read_results(out)
+    assert [r["status"] for r in rows] == ["ok", "failed", "ok"]
+    assert "FloatingPointError" in rows[1]["error"]
+    assert summarize(out)["n_failed"] == 1
+
+
+def test_extra_override_of_a_searched_setting_is_rejected(tmp_path):
+    with pytest.raises(ValueError, match="model.dropout"):
+        run_search(_tiny_search(tmp_path), ["model.dropout=0.9"], hf_train="fake", train_fn=_fake_train([]))
+
+
+def test_failed_trial_is_retried_when_the_command_runs_again(tmp_path):
+    cfg, calls = _tiny_search(tmp_path), []
+    extra = [f"train.checkpoint_dir={tmp_path / 'ckpt'}"]
+    run_search(cfg, extra, hf_train="fake", train_fn=_fake_train(calls, fail_on=0.2))  # e.g. a download failed
+    out = run_search(cfg, extra, hf_train="fake", train_fn=_fake_train(calls))  # problem fixed, same command
+    assert [c[0].run_name for c in calls[3:]] == ["grid-02-do0.2"]  # only the failed trial runs again
+    assert [r["status"] for r in read_results(out)] == ["ok", "failed", "ok", "ok"]  # failed attempt stays
+    s = summarize(out)
+    assert (s["n_trials"], s["n_ok"], s["n_failed"], s["n_attempts"]) == (3, 3, 0, 4)

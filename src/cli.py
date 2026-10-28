@@ -4,6 +4,8 @@ Usage:
     python -m src.cli eda      --config configs/eda.yaml --step N
     python -m src.cli train    --task classification --config configs/cls_scratch.yaml [--override optim.lr=3e-4 ...]
     python -m src.cli train    --task classification --config configs/cls_scratch.yaml --resume <run_dir>/last.pt
+    python -m src.cli tune     --task classification --method grid --config configs/tuning/cls_grid.yaml \
+                               --override model.init_from=<stage1_run_dir>/best.pt [--max-trials 1]
     python -m src.cli evaluate --task classification --checkpoint <run_dir>/best.pt [--split val|test]
     python -m src.cli predict  --task classification --checkpoint <run_dir>/best.pt --image bird.jpg [--topk 5]
 """
@@ -45,6 +47,15 @@ def main() -> None:
     train.add_argument("--override", nargs="*", default=[], metavar="KEY=VALUE",
                        help="Change config values, e.g. optim.lr=3e-4 train.epochs=5")
     train.add_argument("--resume", help="last.pt of an interrupted run, to continue it")
+
+    tune = sub.add_parser("tune", help="Grid or random search: one W&B-tracked training run per trial")
+    tune.add_argument("--task", choices=["classification"], default="classification")
+    tune.add_argument("--method", choices=["grid", "random"], required=True)
+    tune.add_argument("--config", required=True, help="Tuning YAML in configs/tuning/")
+    tune.add_argument("--override", nargs="*", default=[], metavar="KEY=VALUE",
+                      help="Training config changes for EVERY trial, e.g. model.init_from=<stage1>/best.pt")
+    tune.add_argument("--max-trials", type=int, help="Run only the first N trials (1 = test the setup)")
+    tune.add_argument("--results-dir", help="Where results.csv goes (default: results_dir in the config)")
 
     evaluate = sub.add_parser("evaluate", help="Evaluate a checkpoint on the val set (or the test set, final only)")
     evaluate.add_argument("--task", choices=["classification"], default="classification")
@@ -90,6 +101,31 @@ def main() -> None:
               f"{result['epochs_run']} epochs, {result['train_time_s'] / 60:.1f} min)")
         print(f"Checkpoints: {result['ckpt_dir']}/best.pt and last.pt")
         print(f"W&B run:     {result['run_id']}  (project {cfg.tracking.wandb_project})")
+
+    elif args.command == "tune":
+        from src.tuning.run import run_search, summarize
+        from src.utils.config import load_train_config, load_tune_config
+
+        cfg = load_tune_config(args.config)
+        if cfg.method != args.method:
+            parser.error(f"--method {args.method} but the config says method: {cfg.method}")
+        base = load_train_config(cfg.base_config, args.override)
+        if base.task != args.task:
+            parser.error(f"--task {args.task} but {cfg.base_config} says task: {base.task}")
+        if not base.model.init_from:
+            print("WARNING: no model.init_from: trials start from ImageNet weights + a random head, "
+                  "not from the stage 1 checkpoint. Fine for a smoke test only.")
+        out = run_search(cfg, args.override, args.max_trials, args.results_dir)
+
+        metric = f"best_{base.train.monitor}"
+        s = summarize(out, metric, base.train.monitor_mode)
+        print(f"\n{cfg.method} search {cfg.experiment}: {s['n_ok']} ok, {s['n_failed']} failed, "
+              f"{s['total_time_s'] / 60:.1f} min in total")
+        if s["best"]:
+            b = s["best"]
+            print(f"Best trial: {b['run_name']}  {metric} {float(b[metric]):.4f}  (W&B run {b['run_id']})")
+            print("Settings:   " + "  ".join(f"{k}={b[k]}" for k in cfg.space))
+        print(f"All trials: {out}")
 
     elif args.command == "evaluate":
         from src.evaluation.inference import evaluate_checkpoint

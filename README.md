@@ -40,6 +40,32 @@ e.g. `--override optim.lr=3e-4 data.batch_size=32`.
 Each run writes `outputs/checkpoints/<run_name>_<timestamp>/` with `best.pt` (best val accuracy),
 `last.pt` (for resuming) and `history.csv` (one row per epoch).
 
+## Hyperparameter tuning (Task 1.2)
+
+Grid search and random search over transfer learning stage 2 (12 trials each, 8 epochs per trial).
+Every trial starts from the stage 1 `best.pt` and is an ordinary training run, tracked in W&B.
+
+```bash
+# Check the setup first: 1 trial, 64 images, 1 epoch, no W&B, results in a separate folder
+python -m src.cli tune --task classification --method grid --config configs/tuning/cls_grid.yaml \
+    --max-trials 1 --results-dir outputs/tuning-smoke \
+    --override data.limit=64 train.epochs=1 tracking.wandb_mode=disabled
+
+# Grid search: every combination in configs/tuning/cls_grid.yaml
+python -m src.cli tune --task classification --method grid --config configs/tuning/cls_grid.yaml \
+    --override model.init_from=outputs/checkpoints/<stage1_run_dir>/best.pt
+
+# Random search: 12 settings drawn from the ranges in configs/tuning/cls_random.yaml
+python -m src.cli tune --task classification --method random --config configs/tuning/cls_random.yaml \
+    --override model.init_from=outputs/checkpoints/<stage1_run_dir>/best.pt
+```
+
+- `outputs/tuning/<experiment>/results.csv` gets one row per trial: settings, best val accuracy,
+  time, W&B run id, and `ok` or `failed`. W&B groups: `cls-tuning-grid`, `cls-tuning-random`.
+- Interrupted? Run the same command again: trials already in `results.csv` are skipped.
+- Trial checkpoints are deleted after each trial (`keep_checkpoints: false`); `history.csv` stays.
+- On a Mac, start long searches with `caffeinate -i python -m src.cli tune ...` so the laptop does not sleep.
+
 ## Experiment tracking (Weights & Biases / CoreWeave Forge)
 
 Every run is logged to the team's W&B project, so all members' runs share one dashboard.
