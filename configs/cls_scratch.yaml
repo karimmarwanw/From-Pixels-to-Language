@@ -1,0 +1,58 @@
+# From-scratch CNN baseline (Task 1.2). Random init, no pretrained weights anywhere.
+#   python -m src.cli train --task classification --config configs/cls_scratch.yaml
+# Quick smoke test (1 epoch on 256 images):
+#   python -m src.cli train --task classification --config configs/cls_scratch.yaml \
+#       --override data.limit=256 train.epochs=1 run_name=smoke
+# Write floats with a dot or a sign in the exponent (1.0e-3); the loader also converts "1e-3".
+experiment: cls-scratch
+run_name: scratch-cnn-baseline
+task: classification
+seed: 42
+
+data:
+  train_name: Multimodal-Fatima/CUB_train
+  test_name: Multimodal-Fatima/CUB_test
+  cache_dir: data/hf_cache
+  split_path: data/splits/split.json   # 5,095 train / 899 val (EDA step 7)
+  image_size: 224
+  resize_size: 256
+  normalization: imagenet              # same inputs as the transfer model (EDA step 8)
+  crop_scale: [0.5, 1.0]               # augmentation values from EDA step 10 (configs/eda.yaml)
+  hflip_p: 0.5
+  rotation_deg: 15
+  brightness: 0.2
+  contrast: 0.2
+  batch_size: 64
+  num_workers: 4                       # Kaggle gives 4 CPU cores
+
+model:
+  name: scratch_cnn
+  encoder:
+    channels: [32, 64, 128, 256, 512]  # 5 stages, each halves the resolution: 224 -> 7
+    convs_per_stage: 2                 # conv-BN-ReLU blocks per stage (VGG style)
+    in_channels: 3
+  dropout: 0.3
+  freeze_encoder: false
+
+optim:
+  name: adamw
+  lr: 1.0e-3
+  weight_decay: 5.0e-4
+  label_smoothing: 0.1                 # ~25 images/class: softer targets reduce over-confidence
+  scheduler: cosine
+  warmup_epochs: 2                     # BN statistics settle before the full learning rate
+  min_lr_ratio: 0.01
+
+train:
+  epochs: 40
+  amp: true
+  monitor: val_acc
+  monitor_mode: max
+  early_stopping_patience: 10
+  grad_clip: null
+  checkpoint_dir: outputs/checkpoints
+  device: auto
+
+tracking:
+  tracking_uri: mlruns
+  log_checkpoints: false
