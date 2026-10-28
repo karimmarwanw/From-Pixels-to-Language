@@ -56,6 +56,6 @@ train:
 
 tracking:
   wandb_project: from-pixels-to-language
-  wandb_entity: null                   # set to the W&B team name so all runs share one dashboard
+  wandb_entity: cub-dl-team            # W&B team (in Adam's academic account) shared by all members
   wandb_mode: online                   # offline = save locally, upload later with `wandb sync`
   log_checkpoints: false

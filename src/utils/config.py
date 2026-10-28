@@ -134,7 +134,7 @@ class TrainingConfig:
 @dataclass
 class TrackingConfig:
     wandb_project: str = "from-pixels-to-language"  # W&B project shared by the team
-    wandb_entity: str | None = None  # W&B team name; None = your default entity
+    wandb_entity: str | None = "cub-dl-team"  # W&B team shared by the members; None = your default entity
     wandb_mode: str = "online"  # "online", "offline" (sync later with `wandb sync`) or "disabled"
     log_checkpoints: bool = False  # True uploads best.pt as a W&B model artifact (~100 MB for ResNet50)
 
