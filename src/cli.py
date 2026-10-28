@@ -1,7 +1,11 @@
 """Command line entry point.
 
 Usage:
-    python -m src.cli eda --config configs/eda.yaml --step N
+    python -m src.cli eda      --config configs/eda.yaml --step N
+    python -m src.cli train    --task classification --config configs/cls_scratch.yaml [--override optim.lr=3e-4 ...]
+    python -m src.cli train    --task classification --config configs/cls_scratch.yaml --resume <run_dir>/last.pt
+    python -m src.cli evaluate --task classification --checkpoint <run_dir>/best.pt [--split val|test]
+    python -m src.cli predict  --task classification --checkpoint <run_dir>/best.pt --image bird.jpg [--topk 5]
 """
 
 import argparse
@@ -35,6 +39,25 @@ def main() -> None:
     eda.add_argument("--config", required=True, help="Path to the EDA YAML config")
     eda.add_argument("--step", type=int, required=True, help="EDA step number to run")
 
+    train = sub.add_parser("train", help="Train a model from a YAML config, tracked in MLflow")
+    train.add_argument("--task", choices=["classification"], default="classification")
+    train.add_argument("--config", required=True, help="Path to the training YAML config")
+    train.add_argument("--override", nargs="*", default=[], metavar="KEY=VALUE",
+                       help="Change config values, e.g. optim.lr=3e-4 train.epochs=5")
+    train.add_argument("--resume", help="last.pt of an interrupted run, to continue it")
+
+    evaluate = sub.add_parser("evaluate", help="Evaluate a checkpoint on the val set (or the test set, final only)")
+    evaluate.add_argument("--task", choices=["classification"], default="classification")
+    evaluate.add_argument("--checkpoint", required=True)
+    evaluate.add_argument("--split", choices=["val", "test"], default="val")
+    evaluate.add_argument("--out-dir", default="outputs/predictions", help="Where to save logits + labels (.npz)")
+
+    predict = sub.add_parser("predict", help="Predict the species of one image")
+    predict.add_argument("--task", choices=["classification"], default="classification")
+    predict.add_argument("--checkpoint", required=True)
+    predict.add_argument("--image", required=True)
+    predict.add_argument("--topk", type=int, default=5)
+
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")  # captions contain characters the Windows console codepage cannot print
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -54,6 +77,34 @@ def main() -> None:
         with open(out_txt, "w", encoding="utf-8") as f, contextlib.redirect_stdout(_Tee(sys.stdout, f)):
             STEPS[args.step](cfg)
         print(f"\nThis output was also saved to {out_txt}")
+
+    elif args.command == "train":
+        from src.training.run import train_classification
+        from src.utils.config import load_train_config
+
+        cfg = load_train_config(args.config, args.override)
+        if cfg.task != args.task:
+            parser.error(f"--task {args.task} but the config says task: {cfg.task}")
+        result = train_classification(cfg, resume=args.resume)
+        print(f"\nBest {cfg.train.monitor}: {result['best_metric']:.4f} (epoch {result['best_epoch']}, "
+              f"{result['epochs_run']} epochs, {result['train_time_s'] / 60:.1f} min)")
+        print(f"Checkpoints: {result['ckpt_dir']}/best.pt and last.pt")
+        print(f"MLflow run:  {result['run_id']}  (mlflow ui --backend-store-uri {cfg.tracking.tracking_uri})")
+
+    elif args.command == "evaluate":
+        from src.evaluation.inference import evaluate_checkpoint
+
+        r = evaluate_checkpoint(args.checkpoint, args.split, args.out_dir)
+        print(f"\n{args.split} set ({r['n']} images): top-1 acc {r['acc']:.4f}  top-5 acc {r['top5']:.4f}  "
+              f"loss {r['loss']:.4f}")
+        print(f"Predictions saved to {r['predictions_file']}")
+
+    elif args.command == "predict":
+        from src.evaluation.inference import predict_image
+
+        print(f"\nTop-{args.topk} predictions for {args.image}:")
+        for name, p in predict_image(args.checkpoint, args.image, args.topk):
+            print(f"  {p:6.1%}  {name}")
 
 
 if __name__ == "__main__":
