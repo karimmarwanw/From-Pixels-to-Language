@@ -100,8 +100,17 @@ class WandbTracker:
         self.run.config.update({f"env.{k}": v for k, v in tags.items()}, allow_val_change=True)
 
     def log_artifact(self, path: str | Path, kind: str = "file") -> None:
-        """Upload a file to the run (history.csv, a figure; kind="model" for checkpoints)."""
+        """Upload a file to the run (history.csv, a figure; kind="model" for checkpoints).
+
+        Best effort: if the upload fails (W&B server busy, network down) we log a warning and go on.
+        The file stays on disk and the metrics are already logged, so a finished training run is
+        never lost because an optional upload failed.
+        """
         path = Path(path)
-        artifact = wandb.Artifact(name=f"{self.run_name}-{path.stem}", type=kind)
-        artifact.add_file(str(path))
-        self.run.log_artifact(artifact)
+        try:
+            artifact = wandb.Artifact(name=f"{self.run_name}-{path.stem}", type=kind)
+            artifact.add_file(str(path))
+            self.run.log_artifact(artifact)
+        except Exception as e:
+            logger.warning("Could not upload %s to W&B (%s: %s). The file is still at %s",
+                           path.name, type(e).__name__, e, path)

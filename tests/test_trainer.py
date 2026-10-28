@@ -93,3 +93,19 @@ def test_end_to_end_run_with_wandb_offline(tmp_path, monkeypatch):
     model, loaded_cfg, names = load_classifier(f"{result['ckpt_dir']}/best.pt", torch.device("cpu"))
     assert names == ["species_0", "species_1", "species_2"] and loaded_cfg.run_name == "e2e"
     assert model(torch.randn(1, 3, 32, 32)).shape == (1, 3)
+
+
+def test_failed_wandb_upload_does_not_crash_the_run(tmp_path, monkeypatch, caplog):
+    """An upload error after training (W&B server busy, no network) must not throw a finished run away."""
+    from src.training import tracking
+
+    def busy_server(*args, **kwargs):
+        raise RuntimeError("the service process is busy and did not respond in time")
+
+    monkeypatch.setenv("WANDB_DIR", str(tmp_path))
+    f = tmp_path / "history.csv"
+    f.write_text("epoch,val_acc\n1,0.5\n")
+    with tracking.WandbTracker("p", None, "test", "r", mode="disabled") as t:
+        monkeypatch.setattr(t.run, "log_artifact", busy_server)  # the call that hung on 29 Oct
+        t.log_artifact(f, "history")  # must not raise
+    assert "Could not upload history.csv" in caplog.text and f.exists()
