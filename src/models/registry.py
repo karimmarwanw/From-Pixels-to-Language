@@ -8,12 +8,14 @@ from collections.abc import Callable
 
 from src.models.classifier import Classifier
 from src.models.encoders.base import Encoder
+from src.models.encoders.resnet50 import ResNet50Encoder
 from src.models.encoders.scratch_cnn import ScratchCNN
 from src.models.heads.classification import ClassificationHead
 from src.utils.config import ModelConfig
 
 ENCODERS: dict[str, Callable[..., Encoder]] = {
     "scratch_cnn": ScratchCNN,
+    "resnet50": ResNet50Encoder,
 }
 
 
