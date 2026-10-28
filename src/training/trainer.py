@@ -71,7 +71,8 @@ class Trainer:
         self.model.train(train)
         totals = {"loss": 0.0, **{k: 0.0 for k in self.metric_fns}}
         n = 0
-        for x, y in loader:
+        every, t0 = max(1, len(loader) // 10), time.perf_counter()  # ~10 progress lines per pass
+        for i, (x, y) in enumerate(loader, 1):
             x, y = x.to(self.device, non_blocking=True), y.to(self.device, non_blocking=True)
             with torch.set_grad_enabled(train), torch.autocast(self.device.type, enabled=self.use_amp):
                 out = self.model(x)
@@ -92,6 +93,12 @@ class Trainer:
             out = out.detach().float()
             for name, fn in self.metric_fns.items():
                 totals[name] += fn(out, y) * b
+            if i % every == 0 or i == len(loader):
+                logger.info(
+                    "  %s batch %d/%d  loss %.3f%s  (%.0fs)", "train" if train else "val  ", i, len(loader),
+                    totals["loss"] / n, "".join(f"  {k} {totals[k] / n:.3f}" for k in self.metric_fns),
+                    time.perf_counter() - t0,
+                )  # running averages so far in this pass
         return {k: v / max(n, 1) for k, v in totals.items()}
 
     def evaluate(self, loader: DataLoader) -> dict[str, float]:
@@ -104,6 +111,8 @@ class Trainer:
         for epoch in range(self.start_epoch, self.cfg.epochs):
             t0 = time.perf_counter()
             lrs = {f"lr_{g.get('name', i)}": g["lr"] for i, g in enumerate(self.optimizer.param_groups)}
+            logger.info("epoch %d/%d started  %s", epoch + 1, self.cfg.epochs,
+                        "  ".join(f"{k} {v:.2e}" for k, v in lrs.items()))
             train_m = self._run_epoch(train_loader, train=True)
             val_m = self.evaluate(val_loader)
             if self.scheduler is not None:
