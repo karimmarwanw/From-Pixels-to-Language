@@ -1,0 +1,59 @@
+# Transfer learning, stage 2 of 2 (Task 1.2): start from stage 1's best.pt, UNFREEZE everything,
+# fine-tune the encoder with a 10x smaller learning rate than the head so the pretrained features
+# shift gently toward birds instead of being overwritten.
+#   python -m src.cli train --task classification --config configs/cls_transfer_stage2.yaml \
+#       --override model.init_from=outputs/checkpoints/<stage1_run_dir>/best.pt
+experiment: cls-transfer
+run_name: resnet50-stage2-finetune
+task: classification
+seed: 42
+
+data:
+  train_name: Multimodal-Fatima/CUB_train
+  test_name: Multimodal-Fatima/CUB_test
+  cache_dir: data/hf_cache
+  split_path: data/splits/split.json   # 5,095 train / 899 val (EDA step 7)
+  image_size: 224
+  resize_size: 256
+  normalization: imagenet              # same inputs as the transfer model (EDA step 8)
+  crop_scale: [0.5, 1.0]               # augmentation values from EDA step 10 (configs/eda.yaml)
+  hflip_p: 0.5
+  rotation_deg: 15
+  brightness: 0.2
+  contrast: 0.2
+  batch_size: 32                       # full backprop through ResNet50 needs more memory than stage 1
+  num_workers: 4                       # Kaggle gives 4 CPU cores
+
+model:
+  name: resnet50
+  encoder:
+    pretrained: true                   # ImageNet weights (torchvision IMAGENET1K_V2), downloaded once
+  dropout: 0.3
+  freeze_encoder: false                # stage 2: everything trains
+  init_from: null                     # set to stage 1 best.pt with --override (path has a timestamp)
+
+optim:
+  name: adamw
+  lr: 1.0e-3                           # head
+  backbone_lr: 1.0e-4                  # encoder: 10x smaller, gentle fine-tuning
+  weight_decay: 5.0e-4
+  label_smoothing: 0.1
+  scheduler: cosine
+  warmup_epochs: 1
+  min_lr_ratio: 0.01
+
+train:
+  epochs: 20
+  amp: true
+  monitor: val_acc
+  monitor_mode: max
+  early_stopping_patience: 10
+  grad_clip: null
+  checkpoint_dir: outputs/checkpoints
+  device: auto
+
+tracking:
+  wandb_project: from-pixels-to-language
+  wandb_entity: cub-dl-team            # W&B team (in Adam's academic account) shared by all members
+  wandb_mode: online                   # offline = save locally, upload later with `wandb sync`
+  log_checkpoints: false

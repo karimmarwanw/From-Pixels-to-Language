@@ -1,0 +1,58 @@
+# Transfer learning, stage 1 of 2 (Task 1.2): pretrained ResNet50, encoder FROZEN, only the new
+# 200-class head trains. The head starts random; freezing keeps its early, noisy gradients from
+# damaging the ImageNet features.
+#   python -m src.cli train --task classification --config configs/cls_transfer_stage1.yaml
+# Then stage 2 starts from this run's best.pt (see cls_transfer_stage2.yaml).
+experiment: cls-transfer
+run_name: resnet50-stage1-frozen
+task: classification
+seed: 42
+
+data:
+  train_name: Multimodal-Fatima/CUB_train
+  test_name: Multimodal-Fatima/CUB_test
+  cache_dir: data/hf_cache
+  split_path: data/splits/split.json   # 5,095 train / 899 val (EDA step 7)
+  image_size: 224
+  resize_size: 256
+  normalization: imagenet              # same inputs as the transfer model (EDA step 8)
+  crop_scale: [0.5, 1.0]               # augmentation values from EDA step 10 (configs/eda.yaml)
+  hflip_p: 0.5
+  rotation_deg: 15
+  brightness: 0.2
+  contrast: 0.2
+  batch_size: 64
+  num_workers: 4                       # Kaggle gives 4 CPU cores
+
+model:
+  name: resnet50
+  encoder:
+    pretrained: true                   # ImageNet weights (torchvision IMAGENET1K_V2), downloaded once
+  dropout: 0.3
+  freeze_encoder: true                 # stage 1: head only
+  init_from: null
+
+optim:
+  name: adamw
+  lr: 1.0e-3                           # head only
+  weight_decay: 5.0e-4
+  label_smoothing: 0.1
+  scheduler: cosine
+  warmup_epochs: 1
+  min_lr_ratio: 0.01
+
+train:
+  epochs: 10
+  amp: true
+  monitor: val_acc
+  monitor_mode: max
+  early_stopping_patience: 10
+  grad_clip: null
+  checkpoint_dir: outputs/checkpoints
+  device: auto
+
+tracking:
+  wandb_project: from-pixels-to-language
+  wandb_entity: cub-dl-team            # W&B team (in Adam's academic account) shared by all members
+  wandb_mode: online                   # offline = save locally, upload later with `wandb sync`
+  log_checkpoints: false
