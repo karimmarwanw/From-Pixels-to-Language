@@ -1,8 +1,10 @@
 """Quick tests for the training config loader (src/utils/config.py)."""
 
+from dataclasses import asdict
+
 import pytest
 
-from src.utils.config import flatten, load_train_config
+from src.utils.config import TrainConfig, config_from_dict, flatten, load_train_config
 
 
 def test_scratch_config_loads_with_types():
@@ -29,3 +31,9 @@ def test_unknown_key_is_rejected(tmp_path):
 
 def test_flatten():
     assert flatten({"a": {"b": 1, "c": {"d": 2}}, "e": 3}) == {"a.b": 1, "a.c.d": 2, "e": 3}
+
+
+def test_old_checkpoint_config_with_mlflow_key_still_loads():
+    raw = asdict(TrainConfig(experiment="e", run_name="r"))
+    raw["tracking"]["tracking_uri"] = "sqlite:///mlflow.db"  # saved by runs before the switch to W&B
+    assert config_from_dict(raw).run_name == "r"

@@ -23,7 +23,7 @@ python -m src.cli train --task classification --config configs/cls_scratch.yaml 
 # From-scratch CNN baseline
 python -m src.cli train --task classification --config configs/cls_scratch.yaml
 
-# Resume an interrupted run (same MLflow run, continues after the last finished epoch)
+# Resume an interrupted run (same W&B run, continues after the last finished epoch)
 python -m src.cli train --task classification --config configs/cls_scratch.yaml \
     --resume outputs/checkpoints/<run_dir>/last.pt
 
@@ -40,13 +40,20 @@ e.g. `--override optim.lr=3e-4 data.batch_size=32`.
 Each run writes `outputs/checkpoints/<run_name>_<timestamp>/` with `best.pt` (best val accuracy),
 `last.pt` (for resuming) and `history.csv` (one row per epoch).
 
-## Experiment tracking
+## Experiment tracking (Weights & Biases / CoreWeave Forge)
 
-Runs are logged to MLflow in a local SQLite file (`mlflow.db`, artifacts in `mlruns/`):
+Every run is logged to the team's W&B project, so all members' runs share one dashboard.
 
 ```bash
-mlflow ui --backend-store-uri sqlite:///mlflow.db    # then open http://127.0.0.1:5000
+wandb login                      # once per machine; paste your API key from your W&B settings
+python -m src.cli train --task classification --config configs/cls_scratch.yaml \
+    --override tracking.wandb_entity=<team-name>
 ```
+
+- Set `tracking.wandb_entity` in the config to the team name (or pass it with `--override`).
+- On Kaggle, add your key as a secret named `WANDB_API_KEY` (*Add-ons → Secrets*); the launcher notebook reads it.
+- No internet or no account: `--override tracking.wandb_mode=offline`, then `wandb sync wandb/offline-run-*` later.
+- Never commit an API key.
 
 ## EDA (Task 1.1)
 

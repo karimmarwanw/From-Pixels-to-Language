@@ -16,4 +16,5 @@ outputs/**/*.tmp
 data/hf_cache/
 mlruns/
 mlflow.db
+wandb/
 .env

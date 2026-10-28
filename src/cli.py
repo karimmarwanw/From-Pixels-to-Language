@@ -39,7 +39,7 @@ def main() -> None:
     eda.add_argument("--config", required=True, help="Path to the EDA YAML config")
     eda.add_argument("--step", type=int, required=True, help="EDA step number to run")
 
-    train = sub.add_parser("train", help="Train a model from a YAML config, tracked in MLflow")
+    train = sub.add_parser("train", help="Train a model from a YAML config, tracked in W&B")
     train.add_argument("--task", choices=["classification"], default="classification")
     train.add_argument("--config", required=True, help="Path to the training YAML config")
     train.add_argument("--override", nargs="*", default=[], metavar="KEY=VALUE",
@@ -89,7 +89,7 @@ def main() -> None:
         print(f"\nBest {cfg.train.monitor}: {result['best_metric']:.4f} (epoch {result['best_epoch']}, "
               f"{result['epochs_run']} epochs, {result['train_time_s'] / 60:.1f} min)")
         print(f"Checkpoints: {result['ckpt_dir']}/best.pt and last.pt")
-        print(f"MLflow run:  {result['run_id']}  (mlflow ui --backend-store-uri {cfg.tracking.tracking_uri})")
+        print(f"W&B run:     {result['run_id']}  (project {cfg.tracking.wandb_project})")
 
     elif args.command == "evaluate":
         from src.evaluation.inference import evaluate_checkpoint

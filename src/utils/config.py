@@ -133,13 +133,15 @@ class TrainingConfig:
 
 @dataclass
 class TrackingConfig:
-    tracking_uri: str = "sqlite:///mlflow.db"  # runs in mlflow.db, artifacts in ./mlruns (see training/tracking.py)
-    log_checkpoints: bool = False  # True copies .pt files into MLflow (~100 MB each for ResNet50)
+    wandb_project: str = "from-pixels-to-language"  # W&B project shared by the team
+    wandb_entity: str | None = None  # W&B team name; None = your default entity
+    wandb_mode: str = "online"  # "online", "offline" (sync later with `wandb sync`) or "disabled"
+    log_checkpoints: bool = False  # True uploads best.pt as a W&B model artifact (~100 MB for ResNet50)
 
 
 @dataclass
 class TrainConfig:
-    experiment: str  # MLflow experiment, e.g. cls-scratch, cls-transfer
+    experiment: str  # W&B group + tag, e.g. cls-scratch, cls-transfer
     run_name: str  # says what changed, e.g. scratch-cnn-baseline
     task: str = "classification"
     seed: int = 42
@@ -195,13 +197,21 @@ def load_train_config(path: str | Path, overrides: list[str] | None = None) -> T
     return _build(TrainConfig, raw, str(path))
 
 
+LEGACY_KEYS = {"tracking": {"tracking_uri"}}  # MLflow setting in checkpoints made before the switch to W&B
+
+
 def config_from_dict(raw: dict) -> TrainConfig:
-    """Rebuild a TrainConfig from asdict() output (e.g. the copy stored inside a checkpoint)."""
+    """Rebuild a TrainConfig from asdict() output (e.g. the copy stored inside a checkpoint).
+
+    Settings that no longer exist (LEGACY_KEYS) are dropped, so older checkpoints still load.
+    """
+    raw = {k: ({kk: vv for kk, vv in v.items() if kk not in LEGACY_KEYS.get(k, set())} if isinstance(v, dict) else v)
+           for k, v in raw.items()}
     return _build(TrainConfig, raw, "checkpoint config")
 
 
 def flatten(d: dict, prefix: str = "") -> dict[str, object]:
-    """{"optim": {"lr": 0.001}} -> {"optim.lr": 0.001}, for logging params to MLflow."""
+    """{"optim": {"lr": 0.001}} -> {"optim.lr": 0.001}, for logging the config as flat params."""
     out: dict[str, object] = {}
     for key, value in d.items():
         name = f"{prefix}{key}"

@@ -1,5 +1,6 @@
 # From-scratch CNN baseline (Task 1.2). Random init, no pretrained weights anywhere.
 #   python -m src.cli train --task classification --config configs/cls_scratch.yaml
+# Needs a W&B login: `wandb login`, or the WANDB_API_KEY secret on Kaggle.
 # Quick smoke test (1 epoch on 256 images):
 #   python -m src.cli train --task classification --config configs/cls_scratch.yaml \
 #       --override data.limit=256 train.epochs=1 run_name=smoke
@@ -54,5 +55,7 @@ train:
   device: auto
 
 tracking:
-  tracking_uri: sqlite:///mlflow.db   # view: mlflow ui --backend-store-uri sqlite:///mlflow.db
+  wandb_project: from-pixels-to-language
+  wandb_entity: null                   # set to the W&B team name so all runs share one dashboard
+  wandb_mode: online                   # offline = save locally, upload later with `wandb sync`
   log_checkpoints: false

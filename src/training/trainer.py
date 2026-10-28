@@ -44,7 +44,7 @@ class Trainer:
         """
         Args:
             tracker: anything with log_metrics(dict, step); None = no tracking (tests only).
-            extra_state: stored in every checkpoint (config, class names, MLflow run id, ...).
+            extra_state: stored in every checkpoint (config, class names, W&B run id, ...).
         """
         self.model = model.to(device)
         self.optimizer = optimizer

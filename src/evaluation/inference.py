@@ -50,20 +50,25 @@ def evaluate_checkpoint(ckpt_path: str | Path, split: str = "val", out_dir: str 
     np.savez_compressed(out, logits=logits.numpy(), labels=labels.numpy(), class_names=np.array(class_names))
     results["predictions_file"] = str(out)
 
-    _log_to_original_run(ckpt_path, cfg.tracking.tracking_uri, split, results)
+    _log_to_original_run(ckpt_path, cfg, split, results)
     return results
 
 
-def _log_to_original_run(ckpt_path: str | Path, tracking_uri: str, split: str, results: dict) -> None:
-    """Add the evaluation numbers to the MLflow run that trained this checkpoint, if it is on this machine."""
-    from src.training.tracking import MLflowTracker
+def _log_to_original_run(ckpt_path: str | Path, cfg, split: str, results: dict) -> None:
+    """Add the evaluation numbers to the summary of the W&B run that trained this checkpoint."""
+    from src.training.tracking import WandbTracker
 
-    state = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    run_id = torch.load(ckpt_path, map_location="cpu", weights_only=False).get("wandb_run_id")
+    if not run_id:
+        logger.warning("Checkpoint has no W&B run id (trained before W&B); results are printed only.")
+        return
+    t = cfg.tracking
     try:
-        with MLflowTracker(tracking_uri, state["config"]["experiment"], "", run_id=state["mlflow_run_id"]) as t:
-            t.log_metrics({f"{split}_eval_{k}": v for k, v in results.items() if isinstance(v, (int, float))})
-    except Exception as e:  # e.g. checkpoint trained on Kaggle, evaluated on a laptop with another mlflow.db
-        logger.warning("Could not log to the original MLflow run (%s); results are printed only.", e)
+        with WandbTracker(t.wandb_project, t.wandb_entity, cfg.experiment, cfg.run_name, run_id=run_id,
+                          mode=t.wandb_mode) as tracker:
+            tracker.log_summary({f"{split}_eval_{k}": v for k, v in results.items() if isinstance(v, (int, float))})
+    except Exception as e:  # e.g. offline, or not logged in to the team project
+        logger.warning("Could not log to the original W&B run (%s); results are printed only.", e)
 
 
 @torch.no_grad()

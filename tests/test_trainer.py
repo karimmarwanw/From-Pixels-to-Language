@@ -73,9 +73,11 @@ def test_resume_continues_from_last_epoch(tmp_path):
     assert [r["epoch"] for r in trainer.fit(train, val)] == [1, 2, 3, 4]
 
 
-def test_end_to_end_run_with_mlflow(tmp_path, monkeypatch):
-    """Full train_classification on a fake CUB split: config -> loaders -> model -> MLflow -> checkpoint."""
+def test_end_to_end_run_with_wandb_offline(tmp_path, monkeypatch):
+    """Full train_classification on a fake CUB split: config -> loaders -> model -> W&B (offline) -> checkpoint."""
     monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("WANDB_DIR", str(tmp_path))
+    monkeypatch.setenv("WANDB_SILENT", "true")
     split = tmp_path / "split.json"
     split.write_text(json.dumps({"train_indices": list(range(8)), "val_indices": [8, 9, 10, 11]}))
     cfg = TrainConfig(experiment="test", run_name="e2e")
@@ -83,10 +85,11 @@ def test_end_to_end_run_with_mlflow(tmp_path, monkeypatch):
     cfg.data.resize_size = 36
     cfg.model.encoder = {"channels": [8, 16]}
     cfg.train.epochs, cfg.train.amp = 2, False
-    cfg.tracking.tracking_uri = f"sqlite:///{tmp_path / 'mlflow.db'}"
+    cfg.tracking.wandb_mode = "offline"  # no login or network needed; `wandb sync` could upload it later
 
     result = train_classification(cfg, hf_train=fake_cub())
-    assert result["epochs_run"] == 2 and (tmp_path / "mlflow.db").exists()
+    assert result["epochs_run"] == 2 and result["run_id"]
+    assert list((tmp_path / "wandb").glob("offline-run-*"))  # the run was recorded locally
     model, loaded_cfg, names = load_classifier(f"{result['ckpt_dir']}/best.pt", torch.device("cpu"))
     assert names == ["species_0", "species_1", "species_2"] and loaded_cfg.run_name == "e2e"
     assert model(torch.randn(1, 3, 32, 32)).shape == (1, 3)
