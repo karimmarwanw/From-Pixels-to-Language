@@ -17,6 +17,7 @@ Random guessing gives 0.5%; the plan expected 20–40%.
 | Parameters | 4.82 M (encoder 4.71 M + head 0.10 M), all trainable |
 | Training time | 13.1 min (≈19 s / epoch) on 1 × Tesla T4 |
 | Run | Kaggle notebook Version 1 · MLflow run `ce3cf43f9c7f41239e52ae86924b007c` (experiment `cls-scratch`; logged before the team switched to W&B) |
+| Re-run on W&B | Kaggle Version 2 · W&B run [`cub-dl-team/from-pixels-to-language/snt7by8w`](https://forge.coreweave.com/wandb/cub-dl-team/from-pixels-to-language/runs/snt7by8w) · best val top-1 43.5% (epoch 37), top-5 73.2%; same config and seed, within 0.2 points of the first run |
 | Code | commit `15edc79` on `main`, `configs/cls_scratch.yaml` unchanged |
 | Environment | Kaggle, PyTorch 2.11 + CUDA 12.8 (our `requirements.txt` pins 2.14) |
 | Checkpoint | `best.pt` (58 MB) on the team Google Drive — not in git |
