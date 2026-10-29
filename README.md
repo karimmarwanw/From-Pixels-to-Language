@@ -58,6 +58,9 @@ python -m src.cli tune --task classification --method grid --config configs/tuni
 # Random search: 12 settings drawn from the ranges in configs/tuning/cls_random.yaml
 python -m src.cli tune --task classification --method random --config configs/tuning/cls_random.yaml \
     --override model.init_from=outputs/checkpoints/<stage1_run_dir>/best.pt
+
+# Compare the two finished searches: table + 2 figures in outputs/figures/tuning/
+python -m src.cli compare-tuning --configs configs/tuning/cls_grid.yaml configs/tuning/cls_random.yaml
 ```
 
 - `outputs/tuning/<experiment>/results.csv` gets one row per trial: settings, best val accuracy,
@@ -65,6 +68,9 @@ python -m src.cli tune --task classification --method random --config configs/tu
 - Interrupted? Run the same command again: trials already in `results.csv` are skipped.
 - Trial checkpoints are deleted after each trial (`keep_checkpoints: false`); `history.csv` stays.
 - On a Mac, start long searches with `caffeinate -i python -m src.cli tune ...` so the laptop does not sleep.
+  Keep it plugged in with the lid open: closing the lid on battery puts it to sleep anyway.
+- `compare-tuning` compares best val accuracy, number of trials and total time. Only successful trials
+  count toward the time; failed attempts are listed separately.
 
 ## Experiment tracking (Weights & Biases / CoreWeave Forge)
 

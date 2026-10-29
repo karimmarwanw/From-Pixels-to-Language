@@ -6,6 +6,7 @@ Usage:
     python -m src.cli train    --task classification --config configs/cls_scratch.yaml --resume <run_dir>/last.pt
     python -m src.cli tune     --task classification --method grid --config configs/tuning/cls_grid.yaml \
                                --override model.init_from=<stage1_run_dir>/best.pt [--max-trials 1]
+    python -m src.cli compare-tuning --configs configs/tuning/cls_grid.yaml configs/tuning/cls_random.yaml
     python -m src.cli evaluate --task classification --checkpoint <run_dir>/best.pt [--split val|test]
     python -m src.cli predict  --task classification --checkpoint <run_dir>/best.pt --image bird.jpg [--topk 5]
 """
@@ -56,6 +57,11 @@ def main() -> None:
                       help="Training config changes for EVERY trial, e.g. model.init_from=<stage1>/best.pt")
     tune.add_argument("--max-trials", type=int, help="Run only the first N trials (1 = test the setup)")
     tune.add_argument("--results-dir", help="Where results.csv goes (default: results_dir in the config)")
+
+    compare = sub.add_parser("compare-tuning", help="Compare finished searches: table + figures (Task 1.2)")
+    compare.add_argument("--task", choices=["classification"], default="classification")
+    compare.add_argument("--configs", nargs="+", required=True, help="Tuning YAMLs of the searches to compare")
+    compare.add_argument("--out-dir", default="outputs/figures/tuning", help="Where the table and figures go")
 
     evaluate = sub.add_parser("evaluate", help="Evaluate a checkpoint on the val set (or the test set, final only)")
     evaluate.add_argument("--task", choices=["classification"], default="classification")
@@ -126,6 +132,37 @@ def main() -> None:
             print(f"Best trial: {b['run_name']}  {metric} {float(b[metric]):.4f}  (W&B run {b['run_id']})")
             print("Settings:   " + "  ".join(f"{k}={b[k]}" for k in cfg.space))
         print(f"All trials: {out}")
+
+    elif args.command == "compare-tuning":
+        from src.tuning.compare import comparison_table, load_search
+        from src.utils.config import load_train_config, load_tune_config
+        from src.visualization.tuning import plot_best_so_far, plot_settings_effect
+
+        cfgs = [load_tune_config(p) for p in args.configs]
+        methods = [c.method for c in cfgs]
+        if len(set(methods)) != len(methods):
+            parser.error(f"Compare searches with different methods, got {methods}")
+        bases = [load_train_config(c.base_config) for c in cfgs]
+        if any(b.task != args.task for b in bases):
+            parser.error(f"--task {args.task} but a base config has another task")
+        targets = {(b.train.monitor, b.train.monitor_mode) for b in bases}
+        if len(targets) != 1:
+            parser.error(f"The searches pick their best trial by different metrics {targets}, so they cannot be compared")
+        monitor, mode = targets.pop()
+        metric = f"best_{monitor}"
+
+        searches = [load_search(c) for c in cfgs]
+        table = comparison_table(searches, metric, mode).round(
+            {metric: 4, "hours_to_best": 2, "total_hours": 2, "min_per_trial": 1, "failed_min": 1})
+        out_dir = Path(args.out_dir)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        name = "_vs_".join(methods)
+        table.to_csv(out_dir / f"{name}.csv", index=False)
+        figures = [plot_best_so_far(searches, metric, out_dir / f"{name}_best_so_far.png", mode),
+                   plot_settings_effect(searches, metric, out_dir / f"{name}_settings.png")]
+        print("\n" + table.to_string(index=False))
+        print(f"\nTable:   {out_dir / f'{name}.csv'}")
+        print("Figures: " + "  ".join(str(f) for f in figures))
 
     elif args.command == "evaluate":
         from src.evaluation.inference import evaluate_checkpoint

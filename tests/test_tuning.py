@@ -3,8 +3,10 @@
 import math
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
+from src.tuning.compare import SearchResults, best_so_far, comparison_table
 from src.tuning.run import read_results, results_file, run_search, summarize
 from src.tuning.search import grid_trials, make_trials, random_trials, trial_name, trial_overrides
 from src.utils.config import TuneConfig, load_train_config, load_tune_config
@@ -164,3 +166,42 @@ def test_failed_trial_is_retried_when_the_command_runs_again(tmp_path):
     assert [r["status"] for r in read_results(out)] == ["ok", "failed", "ok", "ok"]  # failed attempt stays
     s = summarize(out)
     assert (s["n_trials"], s["n_ok"], s["n_failed"], s["n_attempts"]) == (3, 3, 0, 4)
+
+
+# --------------------------------------------------------------------------- grid vs random comparison
+
+
+def _results(method: str, rows: list[tuple]) -> SearchResults:
+    """rows: (run_name, status, best_val_acc, wall_time_s, model.dropout), in the order the trials ran."""
+    df = pd.DataFrame(rows, columns=["run_name", "status", "best_val_acc", "wall_time_s", "model.dropout"])
+    return SearchResults(method, {"model.dropout": [0.1, 0.5]}, df)
+
+
+GRID_ROWS = [("a", "failed", None, 1800, 0.1),  # crashed (e.g. W&B), then retried as the next row
+             ("a", "ok", 0.50, 3600, 0.1), ("b", "ok", 0.40, 1800, 0.5), ("c", "ok", 0.60, 1800, 0.5)]
+RANDOM_ROWS = [("x", "ok", 0.70, 3600, 0.2), ("y", "ok", 0.65, 3600, 0.4)]
+
+
+def test_best_so_far_counts_only_successful_trials():
+    curve = best_so_far(_results("grid", GRID_ROWS), "best_val_acc")
+    assert list(curve["run_name"]) == ["a", "b", "c"]
+    assert list(curve["hours"]) == [1.0, 1.5, 2.0]  # the failed attempt's 30 min is not added
+    assert list(curve["best"]) == [0.5, 0.5, 0.6]  # a worse trial does not lower the best so far
+
+
+def test_comparison_table():
+    t = comparison_table([_results("grid", GRID_ROWS), _results("random", RANDOM_ROWS)], "best_val_acc")
+    g, r = t.set_index("method").loc["grid"], t.set_index("method").loc["random"]
+    assert (g["trials"], g["failed_attempts"], g["failed_min"]) == (3, 1, 30)
+    assert (g["best_trial"], g["best_val_acc"], g["hours_to_best"], g["total_hours"]) == ("c", 0.6, 2.0, 2.0)
+    assert (r["best_trial"], r["hours_to_best"], r["total_hours"]) == ("x", 1.0, 2.0)  # found its best first
+    assert r["min_per_trial"] == 60
+
+
+def test_comparison_figures_are_written(tmp_path):
+    from src.visualization.tuning import plot_best_so_far, plot_settings_effect
+
+    searches = [_results("grid", GRID_ROWS), _results("random", RANDOM_ROWS)]
+    for path in (plot_best_so_far(searches, "best_val_acc", tmp_path / "a.png"),
+                 plot_settings_effect(searches, "best_val_acc", tmp_path / "b.png")):
+        assert path.exists() and path.stat().st_size > 0
