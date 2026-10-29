@@ -20,6 +20,11 @@ Course: CSE485/CSE488 Deep Learning, Ain Shams University Faculty of Engineering
 
 **Current focus: Milestone 1.** Don't start M2 code unless asked. Do design M1 code so M2 can plug into it.
 
+**Status (29 Oct 2026):**
+- Done: scratch CNN baseline (Sameh, 43.4% val), ResNet50 stage 1 (Adam, 56.2%) and stage 2 (Adam, 79.4%), grid + random search on stage 2 with the comparison (Karim, see [Hyperparameter tuning](#hyperparameter-tuning-required-in-m1)). Details: `docs/experiment_log.md`.
+- Next: Adam retrains stage 2 for 20 epochs with the tuning winner (`grid-10`).
+- Only after that final model exists: metrics (macro P/R/F1, confusion matrix, most-confused pairs), Grad-CAM, training curves, benchmark. Test-set numbers only for that final model.
+
 ## Team
 
 - Team number: TeamXX <!-- TODO -->
@@ -86,7 +91,7 @@ project/
 │   ├── utils/             # seeding, logging, config loading, device
 │   └── cli.py             # single entry point
 ├── tests/                 # quick shape/sanity tests
-└── outputs/               # figures, logs, checkpoints (checkpoints gitignored)
+└── outputs/               # figures, logs, tuning/<search>/results.csv, checkpoints (checkpoints gitignored)
 ```
 
 Keep it this simple. Don't over-engineer.
@@ -106,8 +111,11 @@ python -m src.cli eda --config configs/eda.yaml
 # Classification
 python -m src.cli train    --task classification --config configs/cls_scratch.yaml
 python -m src.cli train    --task classification --config configs/cls_transfer.yaml
-python -m src.cli tune     --task classification --method grid   --config configs/tuning/cls_grid.yaml
-python -m src.cli tune     --task classification --method random --config configs/tuning/cls_random.yaml
+python -m src.cli tune     --task classification --method grid   --config configs/tuning/cls_grid.yaml \
+                           --override model.init_from=outputs/checkpoints/<stage1_run>/best.pt
+python -m src.cli tune     --task classification --method random --config configs/tuning/cls_random.yaml \
+                           --override model.init_from=outputs/checkpoints/<stage1_run>/best.pt
+python -m src.cli compare-tuning --configs configs/tuning/cls_grid.yaml configs/tuning/cls_random.yaml
 python -m src.cli evaluate --task classification --checkpoint outputs/checkpoints/<run>.pt
 python -m src.cli predict  --task classification --image path/to/bird.jpg --checkpoint outputs/checkpoints/<run>.pt
 python -m src.cli gradcam  --checkpoint outputs/checkpoints/<run>.pt --image path/to/bird.jpg
@@ -214,6 +222,10 @@ class Encoder(nn.Module):
 - **Early stopping** uses the validation set, never test.
 - **The scratch baseline is fully from scratch.** Random init, no pretrained weights anywhere.
 - **Transfer learning.** Record what was frozen vs unfrozen and the learning rates for backbone vs head.
+- **Local Mac (MPS) runs** (Karim trains on an M4, 16 GB):
+  - AMP is CUDA-only, so MPS runs in fp32. ResNet50 stage 2 takes ~110 s/epoch at batch 32.
+  - Long runs: start with `caffeinate -i ...`, keep the charger in and the lid open. Closing the lid on battery sleeps the Mac anyway. A low battery slows training.
+  - `CERTIFICATE_VERIFY_FAILED` when torch.hub downloads weights (python.org Python): run `/Applications/Python 3.13/Install Certificates.command`, or prefix the command with `SSL_CERT_FILE="$(python -m certifi)"`.
 
 ## Reproducibility
 
@@ -236,6 +248,8 @@ class Encoder(nn.Module):
 - **Run names** say what changed, e.g. `resnet50-ft-lr3e-4-bs32`.
 - **Tuning trials** share one W&B `group` per search (`train_classification(cfg, group=...)`).
 - `wandb/` (local run files) is gitignored. API keys are never committed. Screenshots or exports go into the report.
+- **Offline mode** for long local runs: `--override tracking.wandb_mode=offline`, then `wandb sync wandb/offline-run-*` afterwards. The overnight tuning ran this way because an online upload once hung and crashed a finished trial.
+- **File uploads are best effort** (`WandbTracker.log_artifact`): a failed upload logs a warning and the run goes on; the file stays on disk.
 
 ## Hyperparameter tuning (required in M1)
 
@@ -245,6 +259,33 @@ class Encoder(nn.Module):
 - **Compare them on:** best val score, number of trials, and total wall-clock time. Produce a table and a plot.
 - To fit Colab limits, tune with short runs (few epochs or a data subset), then fully retrain the best config.
 - Optuna is optional, and only after the two required methods are done.
+
+### How it is implemented
+
+- `src/tuning/search.py` makes the trials. Each trial is a dict of `key=value` overrides, the same format as `cli train --override`.
+  - Grid: `itertools.product`, where the last key changes fastest.
+  - Random: a seeded numpy generator (`sampler_seed`). Learning rates and weight decay are drawn log-uniformly, and values are rounded to 3 significant digits.
+- `src/tuning/run.py` runs the trials. Each trial is an ordinary `train_classification` run in W&B group = the experiment name.
+  - The dataset is loaded once for all trials.
+  - One row is appended to `outputs/tuning/<experiment>/results.csv` after every trial.
+  - Rerunning the command skips trials with status `ok` and retries failed ones. Failed rows are kept as a record.
+  - Trial `.pt` files are deleted after each trial (`keep_checkpoints: false`); `history.csv` is kept.
+- `src/tuning/compare.py` + `src/visualization/tuning.py` (`cli compare-tuning`) build the table and two figures in `outputs/figures/tuning/`.
+  - Only successful trials count toward the time. Failed attempts are listed separately.
+  - `hours_to_best` is the time until a search found its best trial.
+
+### Results (29 Oct 2026, done)
+
+- **Setup:** stage 2, 12 trials per method, 8 epochs per trial. Every trial starts from the stage 1 `best.pt` (`xopc44on`) with seed 42, on Karim's Mac.
+- **Spaces:**
+  - Grid: backbone lr {3e-5, 1e-4, 3e-4} × weight decay {5e-4, 5e-3} × dropout {0.3, 0.5}.
+  - Random: the same three settings plus the head lr, drawn from ranges.
+- **Winner: `grid-10`** (W&B `6okn99lk`), 79.3% val top-1. Settings: `optim.backbone_lr=3e-4`, `optim.weight_decay=5e-4`, `model.dropout=0.5`, `optim.lr=1e-3`.
+- **Best random trial:** `random-05` (W&B `ywghkztm`), 78.9%.
+- **Time:** both searches took ~3.4 h. Random found its best after 1.5 h, grid after 2.8 h.
+- **Only the backbone lr matters:** 3e-5 gives ~72%, 1e-4 ~75–76%, 3e-4 ~78–79%. Weight decay, dropout and head lr changed results by ≤ ~1 point.
+- **Caveat:** 3e-4 is the top of the grid, and its trials were still improving at epoch 8.
+- **Open TODO:** verify the Bergstra & Bengio (2012) citation before it goes into the report.
 
 ## Evaluation
 
@@ -288,7 +329,7 @@ All figures are generated by code into `outputs/figures/<task>/`, with titles an
 - [ ] Trainer + W&B logging + checkpointing
 - [ ] Scratch baseline trained and evaluated
 - [ ] Transfer-learning model trained and evaluated
-- [ ] Grid search + random search + comparison
+- [x] Grid search + random search + comparison (Karim, 29 Oct)
 - [ ] Grad-CAM (correct + wrong, both models)
 - [ ] CLI: train / evaluate / predict / gradcam for classification
 - [ ] README commands verified from a clean environment
