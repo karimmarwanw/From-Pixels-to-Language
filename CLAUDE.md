@@ -22,7 +22,8 @@ Course: CSE485/CSE488 Deep Learning, Ain Shams University Faculty of Engineering
 
 **Status (29 Oct 2026):**
 - Done: scratch CNN baseline (Sameh, 43.4% val), ResNet50 stage 1 (Adam, 56.2%) and stage 2 (Adam, 79.4%), grid + random search on stage 2 with the comparison (Karim, see [Hyperparameter tuning](#hyperparameter-tuning-required-in-m1)). Details: `docs/experiment_log.md`.
-- Next: Adam retrains stage 2 for 20 epochs with the tuning winner (`grid-10`).
+- Done: final model `resnet50-stage2-final` (Adam, W&B `ln4n82r0`): stage 2 retrained for 20 epochs with `grid-10`, **81.8% val**, best epoch 16. `best.pt` is on the team Google Drive in `3_FINAL_stage2_grid10 (81.8% val, W&B ln4n82r0)`.
+- Next: Karim evaluates that model (test set once), Grad-CAM, benchmark.
 - Only after that final model exists: metrics (macro P/R/F1, confusion matrix, most-confused pairs), Grad-CAM, training curves, benchmark. Test-set numbers only for that final model.
 
 ## Team
