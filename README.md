@@ -30,6 +30,10 @@ python -m src.cli train --task classification --config configs/cls_scratch.yaml 
 # Evaluate a checkpoint (val by default; --split test only for the final models)
 python -m src.cli evaluate --task classification --checkpoint outputs/checkpoints/<run_dir>/best.pt --split val
 
+# Full metrics (macro P/R/F1, confusion matrix, most-confused pairs) from saved predictions, no model run.
+# `evaluate` already runs this; tables + figures go to outputs/figures/classification/
+python -m src.cli metrics --predictions outputs/predictions/<run_dir>_<split>.npz
+
 # Predict one image
 python -m src.cli predict --task classification --checkpoint outputs/checkpoints/<run_dir>/best.pt --image bird.jpg
 ```

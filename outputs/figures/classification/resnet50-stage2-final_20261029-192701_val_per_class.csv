@@ -1,0 +1,201 @@
+class,group,n,precision,recall,f1
+Black footed Albatross,Albatross,5,0.8333,1.0000,0.9091
+Laysan Albatross,Albatross,4,0.8000,1.0000,0.8889
+Sooty Albatross,Albatross,5,1.0000,0.4000,0.5714
+Groove billed Ani,Ani,4,0.7500,0.7500,0.7500
+Crested Auklet,Auklet,5,1.0000,1.0000,1.0000
+Least Auklet,Auklet,5,0.8000,0.8000,0.8000
+Parakeet Auklet,Auklet,4,0.8000,1.0000,0.8889
+Rhinoceros Auklet,Auklet,5,1.0000,1.0000,1.0000
+Brewer Blackbird,Blackbird,5,0.5714,0.8000,0.6667
+Red winged Blackbird,Blackbird,5,1.0000,1.0000,1.0000
+Rusty Blackbird,Blackbird,4,0.2000,0.2500,0.2222
+Yellow headed Blackbird,Blackbird,5,1.0000,1.0000,1.0000
+Bobolink,Bobolink,5,1.0000,0.8000,0.8889
+Indigo Bunting,Bunting,4,1.0000,1.0000,1.0000
+Lazuli Bunting,Bunting,5,1.0000,1.0000,1.0000
+Painted Bunting,Bunting,5,1.0000,0.8000,0.8889
+Cardinal,Cardinal,4,0.7500,0.7500,0.7500
+Spotted Catbird,Catbird,4,1.0000,1.0000,1.0000
+Gray Catbird,Catbird,5,0.6667,0.8000,0.7273
+Yellow breasted Chat,Chat,4,1.0000,1.0000,1.0000
+Eastern Towhee,Towhee,4,1.0000,0.7500,0.8571
+Chuck will Widow,Widow,5,0.8333,1.0000,0.9091
+Brandt Cormorant,Cormorant,5,0.6667,0.8000,0.7273
+Red faced Cormorant,Cormorant,4,1.0000,1.0000,1.0000
+Pelagic Cormorant,Cormorant,5,0.8000,0.8000,0.8000
+Bronzed Cowbird,Cowbird,4,0.7500,0.7500,0.7500
+Shiny Cowbird,Cowbird,5,0.4286,0.6000,0.5000
+Brown Creeper,Creeper,4,1.0000,1.0000,1.0000
+American Crow,Crow,5,0.3333,0.2000,0.2500
+Fish Crow,Crow,5,0.3333,0.2000,0.2500
+Black billed Cuckoo,Cuckoo,4,0.5714,1.0000,0.7273
+Mangrove Cuckoo,Cuckoo,4,0.6667,0.5000,0.5714
+Yellow billed Cuckoo,Cuckoo,4,0.5000,0.2500,0.3333
+Gray crowned Rosy Finch,Finch,5,1.0000,1.0000,1.0000
+Purple Finch,Finch,5,1.0000,1.0000,1.0000
+Northern Flicker,Flicker,5,1.0000,1.0000,1.0000
+Acadian Flycatcher,Flycatcher,4,1.0000,0.5000,0.6667
+Great Crested Flycatcher,Flycatcher,4,0.5000,0.5000,0.5000
+Least Flycatcher,Flycatcher,5,0.2500,0.2000,0.2222
+Olive sided Flycatcher,Flycatcher,4,0.7500,0.7500,0.7500
+Scissor tailed Flycatcher,Flycatcher,5,0.7500,0.6000,0.6667
+Vermilion Flycatcher,Flycatcher,5,1.0000,0.8000,0.8889
+Yellow bellied Flycatcher,Flycatcher,4,0.5000,0.7500,0.6000
+Frigatebird,Frigatebird,4,0.7500,0.7500,0.7500
+Northern Fulmar,Fulmar,5,1.0000,0.8000,0.8889
+Gadwall,Gadwall,5,1.0000,0.8000,0.8889
+American Goldfinch,Goldfinch,4,1.0000,1.0000,1.0000
+European Goldfinch,Goldfinch,4,1.0000,1.0000,1.0000
+Boat tailed Grackle,Grackle,5,1.0000,0.6000,0.7500
+Eared Grebe,Grebe,5,1.0000,0.8000,0.8889
+Horned Grebe,Grebe,5,0.7143,1.0000,0.8333
+Pied billed Grebe,Grebe,5,1.0000,1.0000,1.0000
+Western Grebe,Grebe,4,1.0000,1.0000,1.0000
+Blue Grosbeak,Grosbeak,5,1.0000,1.0000,1.0000
+Evening Grosbeak,Grosbeak,5,1.0000,1.0000,1.0000
+Pine Grosbeak,Grosbeak,5,0.6667,0.8000,0.7273
+Rose breasted Grosbeak,Grosbeak,4,1.0000,1.0000,1.0000
+Pigeon Guillemot,Guillemot,4,1.0000,0.7500,0.8571
+California Gull,Gull,4,0.3333,0.5000,0.4000
+Glaucous winged Gull,Gull,5,0.6667,0.4000,0.5000
+Heermann Gull,Gull,5,0.7143,1.0000,0.8333
+Herring Gull,Gull,5,0.0000,0.0000,0.0000
+Ivory Gull,Gull,4,1.0000,1.0000,1.0000
+Ring billed Gull,Gull,4,0.7500,0.7500,0.7500
+Slaty backed Gull,Gull,5,1.0000,0.8000,0.8889
+Western Gull,Gull,5,0.5000,0.6000,0.5455
+Anna Hummingbird,Hummingbird,5,1.0000,0.8000,0.8889
+Ruby throated Hummingbird,Hummingbird,4,0.6000,0.7500,0.6667
+Rufous Hummingbird,Hummingbird,4,1.0000,0.7500,0.8571
+Green Violetear,Violetear,4,1.0000,1.0000,1.0000
+Long tailed Jaeger,Jaeger,4,0.6667,1.0000,0.8000
+Pomarine Jaeger,Jaeger,4,0.6000,0.7500,0.6667
+Blue Jay,Jay,5,1.0000,1.0000,1.0000
+Florida Jay,Jay,5,1.0000,0.8000,0.8889
+Green Jay,Jay,5,1.0000,1.0000,1.0000
+Dark eyed Junco,Junco,4,1.0000,0.7500,0.8571
+Tropical Kingbird,Kingbird,5,1.0000,0.8000,0.8889
+Gray Kingbird,Kingbird,4,0.4444,1.0000,0.6154
+Belted Kingfisher,Kingfisher,4,1.0000,0.5000,0.6667
+Green Kingfisher,Kingfisher,4,1.0000,0.7500,0.8571
+Pied Kingfisher,Kingfisher,4,0.8000,1.0000,0.8889
+Ringed Kingfisher,Kingfisher,4,0.8000,1.0000,0.8889
+White breasted Kingfisher,Kingfisher,5,1.0000,1.0000,1.0000
+Red legged Kittiwake,Kittiwake,5,0.8000,0.8000,0.8000
+Horned Lark,Lark,4,1.0000,1.0000,1.0000
+Pacific Loon,Loon,5,1.0000,1.0000,1.0000
+Mallard,Mallard,4,1.0000,1.0000,1.0000
+Western Meadowlark,Meadowlark,4,1.0000,1.0000,1.0000
+Hooded Merganser,Merganser,4,1.0000,1.0000,1.0000
+Red breasted Merganser,Merganser,5,0.8000,0.8000,0.8000
+Mockingbird,Mockingbird,5,0.7500,0.6000,0.6667
+Nighthawk,Nighthawk,5,1.0000,1.0000,1.0000
+Clark Nutcracker,Nutcracker,4,0.8000,1.0000,0.8889
+White breasted Nuthatch,Nuthatch,5,1.0000,1.0000,1.0000
+Baltimore Oriole,Oriole,4,1.0000,1.0000,1.0000
+Hooded Oriole,Oriole,4,1.0000,1.0000,1.0000
+Orchard Oriole,Oriole,5,1.0000,1.0000,1.0000
+Scott Oriole,Oriole,4,1.0000,1.0000,1.0000
+Ovenbird,Ovenbird,4,0.7500,0.7500,0.7500
+Brown Pelican,Pelican,4,1.0000,1.0000,1.0000
+White Pelican,Pelican,4,1.0000,1.0000,1.0000
+Western Wood Pewee,Pewee,5,0.6250,1.0000,0.7692
+Sayornis,Sayornis,4,0.6000,0.7500,0.6667
+American Pipit,Pipit,5,1.0000,0.8000,0.8889
+Whip poor Will,Will,4,0.7500,0.7500,0.7500
+Horned Puffin,Puffin,5,1.0000,1.0000,1.0000
+Common Raven,Raven,4,0.4000,0.5000,0.4444
+White necked Raven,Raven,4,1.0000,0.7500,0.8571
+American Redstart,Redstart,5,0.7143,1.0000,0.8333
+Geococcyx,Geococcyx,4,1.0000,1.0000,1.0000
+Loggerhead Shrike,Shrike,5,0.6667,0.8000,0.7273
+Great Grey Shrike,Shrike,5,0.6000,0.6000,0.6000
+Baird Sparrow,Sparrow,5,0.6667,0.4000,0.5000
+Black throated Sparrow,Sparrow,5,1.0000,1.0000,1.0000
+Brewer Sparrow,Sparrow,4,0.5000,0.5000,0.5000
+Chipping Sparrow,Sparrow,5,0.7500,0.6000,0.6667
+Clay colored Sparrow,Sparrow,4,0.7500,0.7500,0.7500
+House Sparrow,Sparrow,4,0.7500,0.7500,0.7500
+Field Sparrow,Sparrow,4,1.0000,1.0000,1.0000
+Fox Sparrow,Sparrow,5,1.0000,0.8000,0.8889
+Grasshopper Sparrow,Sparrow,4,1.0000,0.7500,0.8571
+Harris Sparrow,Sparrow,4,1.0000,1.0000,1.0000
+Henslow Sparrow,Sparrow,4,0.7500,0.7500,0.7500
+Le Conte Sparrow,Sparrow,5,0.5714,0.8000,0.6667
+Lincoln Sparrow,Sparrow,4,0.6667,1.0000,0.8000
+Nelson Sharp tailed Sparrow,Sparrow,4,0.6667,0.5000,0.5714
+Savannah Sparrow,Sparrow,4,0.6667,1.0000,0.8000
+Seaside Sparrow,Sparrow,5,0.8000,0.8000,0.8000
+Song Sparrow,Sparrow,4,0.7500,0.7500,0.7500
+Tree Sparrow,Sparrow,4,0.8000,1.0000,0.8889
+Vesper Sparrow,Sparrow,4,0.6000,0.7500,0.6667
+White crowned Sparrow,Sparrow,4,1.0000,0.7500,0.8571
+White throated Sparrow,Sparrow,4,1.0000,1.0000,1.0000
+Cape Glossy Starling,Starling,5,1.0000,1.0000,1.0000
+Bank Swallow,Swallow,4,0.7500,0.7500,0.7500
+Barn Swallow,Swallow,5,0.6667,0.4000,0.5000
+Cliff Swallow,Swallow,5,0.6667,0.4000,0.5000
+Tree Swallow,Swallow,4,0.6667,1.0000,0.8000
+Scarlet Tanager,Tanager,5,1.0000,1.0000,1.0000
+Summer Tanager,Tanager,5,0.8333,1.0000,0.9091
+Artic Tern,Tern,4,0.8000,1.0000,0.8889
+Black Tern,Tern,4,1.0000,0.7500,0.8571
+Caspian Tern,Tern,4,0.5000,0.5000,0.5000
+Common Tern,Tern,4,0.5000,0.5000,0.5000
+Elegant Tern,Tern,5,1.0000,0.8000,0.8889
+Forsters Tern,Tern,4,0.5000,0.5000,0.5000
+Least Tern,Tern,4,0.6000,0.7500,0.6667
+Green tailed Towhee,Towhee,4,1.0000,1.0000,1.0000
+Brown Thrasher,Thrasher,5,1.0000,0.8000,0.8889
+Sage Thrasher,Thrasher,4,1.0000,1.0000,1.0000
+Black capped Vireo,Vireo,5,1.0000,1.0000,1.0000
+Blue headed Vireo,Vireo,5,1.0000,0.8000,0.8889
+Philadelphia Vireo,Vireo,5,0.3750,0.6000,0.4615
+Red eyed Vireo,Vireo,5,0.7500,0.6000,0.6667
+Warbling Vireo,Vireo,4,0.3333,0.2500,0.2857
+White eyed Vireo,Vireo,5,0.8333,1.0000,0.9091
+Yellow throated Vireo,Vireo,4,1.0000,0.5000,0.6667
+Bay breasted Warbler,Warbler,5,0.8333,1.0000,0.9091
+Black and white Warbler,Warbler,4,1.0000,1.0000,1.0000
+Black throated Blue Warbler,Warbler,5,1.0000,1.0000,1.0000
+Blue winged Warbler,Warbler,5,1.0000,0.8000,0.8889
+Canada Warbler,Warbler,5,0.8333,1.0000,0.9091
+Cape May Warbler,Warbler,5,0.8000,0.8000,0.8000
+Cerulean Warbler,Warbler,5,1.0000,0.8000,0.8889
+Chestnut sided Warbler,Warbler,4,0.8000,1.0000,0.8889
+Golden winged Warbler,Warbler,5,1.0000,1.0000,1.0000
+Hooded Warbler,Warbler,5,1.0000,0.8000,0.8889
+Kentucky Warbler,Warbler,4,0.7500,0.7500,0.7500
+Magnolia Warbler,Warbler,4,1.0000,1.0000,1.0000
+Mourning Warbler,Warbler,5,1.0000,0.8000,0.8889
+Myrtle Warbler,Warbler,4,0.8000,1.0000,0.8889
+Nashville Warbler,Warbler,4,0.6000,0.7500,0.6667
+Orange crowned Warbler,Warbler,5,0.5000,0.8000,0.6154
+Palm Warbler,Warbler,5,1.0000,0.4000,0.5714
+Pine Warbler,Warbler,5,0.7143,1.0000,0.8333
+Prairie Warbler,Warbler,5,1.0000,0.6000,0.7500
+Prothonotary Warbler,Warbler,4,1.0000,1.0000,1.0000
+Swainson Warbler,Warbler,4,1.0000,0.5000,0.6667
+Tennessee Warbler,Warbler,4,1.0000,0.5000,0.6667
+Wilson Warbler,Warbler,5,0.8333,1.0000,0.9091
+Worm eating Warbler,Warbler,4,0.8000,1.0000,0.8889
+Yellow Warbler,Warbler,4,0.8000,1.0000,0.8889
+Northern Waterthrush,Waterthrush,4,0.5000,0.5000,0.5000
+Louisiana Waterthrush,Waterthrush,5,0.6000,0.6000,0.6000
+Bohemian Waxwing,Waxwing,5,0.8333,1.0000,0.9091
+Cedar Waxwing,Waxwing,4,1.0000,0.5000,0.6667
+American Three toed Woodpecker,Woodpecker,5,1.0000,1.0000,1.0000
+Pileated Woodpecker,Woodpecker,5,1.0000,1.0000,1.0000
+Red bellied Woodpecker,Woodpecker,5,0.8333,1.0000,0.9091
+Red cockaded Woodpecker,Woodpecker,4,1.0000,1.0000,1.0000
+Red headed Woodpecker,Woodpecker,5,1.0000,0.8000,0.8889
+Downy Woodpecker,Woodpecker,4,0.8000,1.0000,0.8889
+Bewick Wren,Wren,5,1.0000,1.0000,1.0000
+Cactus Wren,Wren,5,1.0000,0.8000,0.8889
+Carolina Wren,Wren,5,0.8333,1.0000,0.9091
+House Wren,Wren,4,1.0000,1.0000,1.0000
+Marsh Wren,Wren,4,0.8000,1.0000,0.8889
+Rock Wren,Wren,4,1.0000,0.7500,0.8571
+Winter Wren,Wren,5,0.8000,0.8000,0.8000
+Common Yellowthroat,Yellowthroat,4,1.0000,1.0000,1.0000

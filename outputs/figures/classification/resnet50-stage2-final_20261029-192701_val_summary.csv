@@ -1,0 +1,2 @@
+top1,top5,macro_precision,macro_recall,macro_f1,within_group_error_share,n
+0.8176,0.9466,0.8330,0.8180,0.8133,0.5610,899

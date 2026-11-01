@@ -1,0 +1,16 @@
+true,predicted,count,true_total,share
+Yellow billed Cuckoo,Black billed Cuckoo,3,4,0.7500
+Warbling Vireo,Philadelphia Vireo,3,4,0.7500
+Rusty Blackbird,Brewer Blackbird,2,4,0.5000
+Acadian Flycatcher,Least Flycatcher,2,4,0.5000
+Least Flycatcher,Western Wood Pewee,2,5,0.4000
+Scissor tailed Flycatcher,Gray Kingbird,2,5,0.4000
+Herring Gull,California Gull,2,5,0.4000
+Herring Gull,Western Gull,2,5,0.4000
+Great Grey Shrike,Loggerhead Shrike,2,5,0.4000
+Forsters Tern,Least Tern,2,4,0.5000
+Louisiana Waterthrush,Northern Waterthrush,2,5,0.4000
+Sooty Albatross,Laysan Albatross,1,5,0.2000
+Sooty Albatross,Long tailed Jaeger,1,5,0.2000
+Sooty Albatross,Clark Nutcracker,1,5,0.2000
+Groove billed Ani,Common Raven,1,4,0.2500

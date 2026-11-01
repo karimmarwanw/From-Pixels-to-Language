@@ -8,6 +8,7 @@ Usage:
                                --override model.init_from=<stage1_run_dir>/best.pt [--max-trials 1]
     python -m src.cli compare-tuning --configs configs/tuning/cls_grid.yaml configs/tuning/cls_random.yaml
     python -m src.cli evaluate --task classification --checkpoint <run_dir>/best.pt [--split val|test]
+    python -m src.cli metrics  --predictions outputs/predictions/<run_dir>_<split>.npz [--top-pairs 15]
     python -m src.cli predict  --task classification --checkpoint <run_dir>/best.pt --image bird.jpg [--topk 5]
 """
 
@@ -32,6 +33,44 @@ class _Tee:
     def flush(self) -> None:
         for s in self.streams:
             s.flush()
+
+
+def _report_metrics(predictions: str | Path, figures_dir: str | Path, top_pairs: int) -> None:
+    """Full metrics from an `evaluate` .npz: print a summary, save 3 tables and 2 figures."""
+    import pandas as pd
+
+    from src.evaluation.metrics import (
+        confusion, load_predictions, most_confused_pairs, per_class_metrics, summary_metrics)
+    from src.visualization.evaluation import plot_confused_pairs, plot_confusion_matrix
+
+    logits, labels, names = load_predictions(predictions)
+    stem = Path(predictions).stem  # <run>_<timestamp>_<split>
+    run, split = stem.rsplit("_", 2)[0], stem.rsplit("_", 1)[1]
+    s = summary_metrics(logits, labels, names)
+    per_class = per_class_metrics(logits, labels, names)
+    cm = confusion(logits, labels, len(names))
+    pairs = most_confused_pairs(cm, names, top_pairs)
+
+    out = Path(figures_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    pd.DataFrame([s]).to_csv(out / f"{stem}_summary.csv", index=False, float_format="%.4f")
+    per_class.to_csv(out / f"{stem}_per_class.csv", index=False, float_format="%.4f")
+    pairs.to_csv(out / f"{stem}_confused_pairs.csv", index=False, float_format="%.4f")
+    where = f"{run}, {split} set ({s['n']:,} images)"
+    figures = [plot_confused_pairs(pairs, f"Most-confused species pairs: {where}", out / f"{stem}_confused_pairs.png"),
+               plot_confusion_matrix(cm, names, f"Confusion matrix: {where}", out / f"{stem}_confusion_matrix.png")]
+
+    print(f"\nFull metrics, {where}:")
+    print(f"  top-1 {s['top1']:.4f}  top-5 {s['top5']:.4f}")
+    print(f"  macro precision {s['macro_precision']:.4f}  recall {s['macro_recall']:.4f}  F1 {s['macro_f1']:.4f}")
+    print(f"  mistakes that stay within the same group (e.g. warbler -> warbler): {s['within_group_error_share']:.1%}")
+    print("Hardest species (lowest F1): " + ", ".join(
+        f"{r['class']} {r['f1']:.2f}" for _, r in per_class.nsmallest(5, "f1").iterrows()))
+    print("Most confused (true -> predicted, wrong / all):")
+    for _, p in pairs.head(5).iterrows():
+        print(f"  {p['true']} -> {p['predicted']}  {p['count']}/{p['true_total']}")
+    print(f"Tables:  {out}/{stem}_{{summary,per_class,confused_pairs}}.csv")
+    print("Figures: " + "  ".join(str(f) for f in figures))
 
 
 def main() -> None:
@@ -68,6 +107,15 @@ def main() -> None:
     evaluate.add_argument("--checkpoint", required=True)
     evaluate.add_argument("--split", choices=["val", "test"], default="val")
     evaluate.add_argument("--out-dir", default="outputs/predictions", help="Where to save logits + labels (.npz)")
+    evaluate.add_argument("--figures-dir", default="outputs/figures/classification",
+                          help="Where the metric tables and figures go")
+    evaluate.add_argument("--top-pairs", type=int, default=15, help="How many most-confused pairs to show")
+
+    metrics = sub.add_parser("metrics", help="Full metrics + figures from saved predictions (no model run)")
+    metrics.add_argument("--predictions", required=True, help="An .npz written by `evaluate`")
+    metrics.add_argument("--figures-dir", default="outputs/figures/classification",
+                         help="Where the metric tables and figures go")
+    metrics.add_argument("--top-pairs", type=int, default=15, help="How many most-confused pairs to show")
 
     predict = sub.add_parser("predict", help="Predict the species of one image")
     predict.add_argument("--task", choices=["classification"], default="classification")
@@ -171,6 +219,10 @@ def main() -> None:
         print(f"\n{args.split} set ({r['n']} images): top-1 acc {r['acc']:.4f}  top-5 acc {r['top5']:.4f}  "
               f"loss {r['loss']:.4f}")
         print(f"Predictions saved to {r['predictions_file']}")
+        _report_metrics(r["predictions_file"], args.figures_dir, args.top_pairs)
+
+    elif args.command == "metrics":
+        _report_metrics(args.predictions, args.figures_dir, args.top_pairs)
 
     elif args.command == "predict":
         from src.evaluation.inference import predict_image
