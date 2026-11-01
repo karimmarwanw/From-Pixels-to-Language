@@ -9,6 +9,7 @@ Usage:
     python -m src.cli compare-tuning --configs configs/tuning/cls_grid.yaml configs/tuning/cls_random.yaml
     python -m src.cli evaluate --task classification --checkpoint <run_dir>/best.pt [--split val|test]
     python -m src.cli metrics  --predictions outputs/predictions/<run_dir>_<split>.npz [--top-pairs 15]
+    python -m src.cli gradcam  --checkpoint <run_dir>/best.pt [--image bird.jpg | --n 6]
     python -m src.cli predict  --task classification --checkpoint <run_dir>/best.pt --image bird.jpg [--topk 5]
 """
 
@@ -123,6 +124,13 @@ def main() -> None:
     predict.add_argument("--image", required=True)
     predict.add_argument("--topk", type=int, default=5)
 
+    gradcam = sub.add_parser("gradcam", help="Grad-CAM heatmaps: one image, or N correct + N wrong val images")
+    gradcam.add_argument("--checkpoint", required=True)
+    gradcam.add_argument("--image", help="Explain this image; without it, val images are picked")
+    gradcam.add_argument("--n", type=int, default=6, help="Correct and wrong val images per figure")
+    gradcam.add_argument("--seed", type=int, help="Which val images are picked (default: the run's seed)")
+    gradcam.add_argument("--out-dir", default="outputs/figures/classification/gradcam")
+
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")  # captions contain characters the Windows console codepage cannot print
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -230,6 +238,12 @@ def main() -> None:
         print(f"\nTop-{args.topk} predictions for {args.image}:")
         for name, p in predict_image(args.checkpoint, args.image, args.topk):
             print(f"  {p:6.1%}  {name}")
+
+    elif args.command == "gradcam":
+        from src.visualization.gradcam import explain_checkpoint
+
+        paths = explain_checkpoint(args.checkpoint, args.out_dir, args.n, args.seed, args.image)
+        print("\nGrad-CAM figures: " + "  ".join(str(p) for p in paths))
 
 
 if __name__ == "__main__":

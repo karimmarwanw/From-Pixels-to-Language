@@ -34,6 +34,10 @@ python -m src.cli evaluate --task classification --checkpoint outputs/checkpoint
 # `evaluate` already runs this; tables + figures go to outputs/figures/classification/
 python -m src.cli metrics --predictions outputs/predictions/<run_dir>_<split>.npz
 
+# Grad-CAM heatmaps: 6 correct + 6 wrong val images (or --image bird.jpg for one image)
+# -> outputs/figures/classification/gradcam/
+python -m src.cli gradcam --checkpoint outputs/checkpoints/<run_dir>/best.pt
+
 # Predict one image
 python -m src.cli predict --task classification --checkpoint outputs/checkpoints/<run_dir>/best.pt --image bird.jpg
 ```
