@@ -21,10 +21,12 @@ logger = logging.getLogger(__name__)
 
 
 def evaluate_checkpoint(ckpt_path: str | Path, split: str = "val", out_dir: str | Path = "outputs/predictions",
-                        device_name: str = "auto") -> dict:
+                        device_name: str = "auto", log_to_wandb: bool = True) -> dict:
     """Top-1/top-5 accuracy and cross-entropy on `split` ("val" or "test"); writes <out_dir>/<run>_<split>.npz.
 
     The test split is for FINAL numbers only: never pick models or settings by test results.
+    log_to_wandb: add these numbers to the training run's W&B summary. The CLI turns it off, because it
+    logs the full metrics (macro P/R/F1 too) from the saved predictions right after.
     """
     device = get_device(device_name)
     model, cfg, class_names = load_classifier(ckpt_path, device)
@@ -50,8 +52,18 @@ def evaluate_checkpoint(ckpt_path: str | Path, split: str = "val", out_dir: str 
     np.savez_compressed(out, logits=logits.numpy(), labels=labels.numpy(), class_names=np.array(class_names))
     results["predictions_file"] = str(out)
 
-    _log_to_original_run(ckpt_path, cfg, split, results)
+    if log_to_wandb:
+        _log_to_original_run(ckpt_path, cfg, split, results)
     return results
+
+
+def log_to_training_run(ckpt_path: str | Path, split: str, results: dict) -> None:
+    """Add evaluation numbers (e.g. computed from saved predictions) to the W&B run that trained
+    `ckpt_path`, as <split>_eval_<name> in its summary. The model itself is not run again."""
+    from src.utils.config import config_from_dict
+
+    state = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+    _log_to_original_run(ckpt_path, config_from_dict(state["config"]), split, results)
 
 
 def _log_to_original_run(ckpt_path: str | Path, cfg, split: str, results: dict) -> None:

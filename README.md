@@ -32,11 +32,17 @@ python -m src.cli evaluate --task classification --checkpoint outputs/checkpoint
 
 # Full metrics (macro P/R/F1, confusion matrix, most-confused pairs) from saved predictions, no model run.
 # `evaluate` already runs this; tables + figures go to outputs/figures/classification/
-python -m src.cli metrics --predictions outputs/predictions/<run_dir>_<split>.npz
+# --checkpoint also adds the numbers to the W&B run that trained it (as <split>_eval_*)
+python -m src.cli metrics --predictions outputs/predictions/<run_dir>_<split>.npz \
+    --checkpoint outputs/checkpoints/<run_dir>/best.pt
 
 # Grad-CAM heatmaps: 6 correct + 6 wrong val images (or --image bird.jpg for one image)
 # -> outputs/figures/classification/gradcam/
 python -m src.cli gradcam --checkpoint outputs/checkpoints/<run_dir>/best.pt
+
+# Training curves (train vs val) per run + a comparison of the runs -> outputs/figures/classification/curves/
+python -m src.cli curves --runs outputs/checkpoints/<scratch_run_dir> outputs/checkpoints/<final_run_dir> \
+    --labels "Scratch CNN" "ResNet50 final"
 
 # Predict one image
 python -m src.cli predict --task classification --checkpoint outputs/checkpoints/<run_dir>/best.pt --image bird.jpg

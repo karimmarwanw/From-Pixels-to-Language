@@ -10,6 +10,7 @@ Usage:
     python -m src.cli evaluate --task classification --checkpoint <run_dir>/best.pt [--split val|test]
     python -m src.cli metrics  --predictions outputs/predictions/<run_dir>_<split>.npz [--top-pairs 15]
     python -m src.cli gradcam  --checkpoint <run_dir>/best.pt [--image bird.jpg | --n 6]
+    python -m src.cli curves   --runs <run_dir> [<run_dir> ...] [--labels "Name 1" "Name 2" ...]
     python -m src.cli predict  --task classification --checkpoint <run_dir>/best.pt --image bird.jpg [--topk 5]
 """
 
@@ -36,8 +37,12 @@ class _Tee:
             s.flush()
 
 
-def _report_metrics(predictions: str | Path, figures_dir: str | Path, top_pairs: int) -> None:
-    """Full metrics from an `evaluate` .npz: print a summary, save 3 tables and 2 figures."""
+def _report_metrics(predictions: str | Path, figures_dir: str | Path, top_pairs: int,
+                    log_checkpoint: str | Path | None = None) -> None:
+    """Full metrics from an `evaluate` .npz: print a summary, save 3 tables and 2 figures.
+
+    log_checkpoint: also add the numbers to the W&B run that trained this checkpoint (no model run).
+    """
     import pandas as pd
 
     from src.evaluation.metrics import (
@@ -72,6 +77,16 @@ def _report_metrics(predictions: str | Path, figures_dir: str | Path, top_pairs:
         print(f"  {p['true']} -> {p['predicted']}  {p['count']}/{p['true_total']}")
     print(f"Tables:  {out}/{stem}_{{summary,per_class,confused_pairs}}.csv")
     print("Figures: " + "  ".join(str(f) for f in figures))
+
+    if log_checkpoint:
+        import torch
+
+        from src.evaluation.inference import log_to_training_run
+
+        loss = torch.nn.functional.cross_entropy(torch.from_numpy(logits), torch.from_numpy(labels).long()).item()
+        log_to_training_run(log_checkpoint, split, {"acc": s["top1"], "top5": s["top5"], "loss": loss, "n": s["n"],
+                                                    **{k: s[k] for k in ("macro_precision", "macro_recall",
+                                                                         "macro_f1", "within_group_error_share")}})
 
 
 def main() -> None:
@@ -117,6 +132,7 @@ def main() -> None:
     metrics.add_argument("--figures-dir", default="outputs/figures/classification",
                          help="Where the metric tables and figures go")
     metrics.add_argument("--top-pairs", type=int, default=15, help="How many most-confused pairs to show")
+    metrics.add_argument("--checkpoint", help="Also log the numbers to the W&B run that trained this checkpoint")
 
     predict = sub.add_parser("predict", help="Predict the species of one image")
     predict.add_argument("--task", choices=["classification"], default="classification")
@@ -130,6 +146,11 @@ def main() -> None:
     gradcam.add_argument("--n", type=int, default=6, help="Correct and wrong val images per figure")
     gradcam.add_argument("--seed", type=int, help="Which val images are picked (default: the run's seed)")
     gradcam.add_argument("--out-dir", default="outputs/figures/classification/gradcam")
+
+    curves = sub.add_parser("curves", help="Training curves per run + a comparison of the runs, from history.csv")
+    curves.add_argument("--runs", nargs="+", required=True, help="Run folders (with history.csv) or history.csv files")
+    curves.add_argument("--labels", nargs="+", help="Names for the runs in the figures (default: folder names)")
+    curves.add_argument("--out-dir", default="outputs/figures/classification/curves")
 
     args = parser.parse_args()
     sys.stdout.reconfigure(encoding="utf-8")  # captions contain characters the Windows console codepage cannot print
@@ -223,14 +244,14 @@ def main() -> None:
     elif args.command == "evaluate":
         from src.evaluation.inference import evaluate_checkpoint
 
-        r = evaluate_checkpoint(args.checkpoint, args.split, args.out_dir)
+        r = evaluate_checkpoint(args.checkpoint, args.split, args.out_dir, log_to_wandb=False)  # logged below
         print(f"\n{args.split} set ({r['n']} images): top-1 acc {r['acc']:.4f}  top-5 acc {r['top5']:.4f}  "
               f"loss {r['loss']:.4f}")
         print(f"Predictions saved to {r['predictions_file']}")
-        _report_metrics(r["predictions_file"], args.figures_dir, args.top_pairs)
+        _report_metrics(r["predictions_file"], args.figures_dir, args.top_pairs, log_checkpoint=args.checkpoint)
 
     elif args.command == "metrics":
-        _report_metrics(args.predictions, args.figures_dir, args.top_pairs)
+        _report_metrics(args.predictions, args.figures_dir, args.top_pairs, log_checkpoint=args.checkpoint)
 
     elif args.command == "predict":
         from src.evaluation.inference import predict_image
@@ -244,6 +265,25 @@ def main() -> None:
 
         paths = explain_checkpoint(args.checkpoint, args.out_dir, args.n, args.seed, args.image)
         print("\nGrad-CAM figures: " + "  ".join(str(p) for p in paths))
+
+    elif args.command == "curves":
+        from src.visualization.curves import (
+            comparison_table, load_history, plot_comparison, plot_run_curves, run_label)
+
+        files = [Path(r) / "history.csv" if Path(r).is_dir() else Path(r) for r in args.runs]
+        labels = args.labels or [run_label(f) for f in files]
+        if len(labels) != len(files):
+            parser.error(f"--labels needs one name per run: {len(files)} runs, {len(labels)} labels")
+        histories = {label: load_history(f) for label, f in zip(labels, files)}
+        out = Path(args.out_dir)
+        figures = [plot_run_curves(h, label, out / f"{run_label(f)}_curves.png")
+                   for (label, h), f in zip(histories.items(), files)]
+        figures.append(plot_comparison(histories, out / "comparison.png"))
+        table = comparison_table(histories)
+        table.to_csv(out / "comparison.csv", index=False, float_format="%.4f")
+        print("\n" + table.to_string(index=False, float_format=lambda v: f"{v:.4f}"))
+        print(f"\nTable:   {out / 'comparison.csv'}")
+        print("Figures: " + "  ".join(str(f) for f in figures))
 
 
 if __name__ == "__main__":
