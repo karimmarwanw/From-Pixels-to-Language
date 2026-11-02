@@ -20,11 +20,11 @@ Course: CSE485/CSE488 Deep Learning, Ain Shams University Faculty of Engineering
 
 **Current focus: Milestone 1.** Don't start M2 code unless asked. Do design M1 code so M2 can plug into it.
 
-**Status (29 Oct 2026):**
+**Status (2 Nov 2026):**
 - Done: scratch CNN baseline (Sameh, 43.4% val), ResNet50 stage 1 (Adam, 56.2%) and stage 2 (Adam, 79.4%), grid + random search on stage 2 with the comparison (Karim, see [Hyperparameter tuning](#hyperparameter-tuning-required-in-m1)). Details: `docs/experiment_log.md`.
 - Done: final model `resnet50-stage2-final` (Adam, W&B `ln4n82r0`): stage 2 retrained for 20 epochs with `grid-10`, **81.8% val**, best epoch 16. `best.pt` is on the team Google Drive in `3_FINAL_stage2_grid10 (81.8% val, W&B ln4n82r0)`.
-- Next: Karim evaluates that model (test set once), Grad-CAM, benchmark.
-- Only after that final model exists: metrics (macro P/R/F1, confusion matrix, most-confused pairs), Grad-CAM, training curves, benchmark. Test-set numbers only for that final model.
+- Done (Karim): **final test evaluation, run once: 82.84% top-1, 95.34% top-5, macro F1 82.73%** (5,794 images). Also: full metrics + confused pairs, Grad-CAM for scratch + final, training curves, benchmark (`docs/benchmark.md`). See [Evaluation](#evaluation).
+- Done (Karim, 2 Nov, team decision): scratch baseline run on test **once**, for a same-split comparison with published from-scratch results (spec Section 5.11): 44.77% top-1, 75.27% top-5, macro F1 44.21%. Never re-run either model on test.
 
 ## Team
 
@@ -118,8 +118,10 @@ python -m src.cli tune     --task classification --method random --config config
                            --override model.init_from=outputs/checkpoints/<stage1_run>/best.pt
 python -m src.cli compare-tuning --configs configs/tuning/cls_grid.yaml configs/tuning/cls_random.yaml
 python -m src.cli evaluate --task classification --checkpoint outputs/checkpoints/<run>.pt
+python -m src.cli metrics  --predictions outputs/predictions/<run_dir>_<split>.npz [--checkpoint <run>.pt]  # no model run
 python -m src.cli predict  --task classification --image path/to/bird.jpg --checkpoint outputs/checkpoints/<run>.pt
-python -m src.cli gradcam  --checkpoint outputs/checkpoints/<run>.pt --image path/to/bird.jpg
+python -m src.cli gradcam  --checkpoint outputs/checkpoints/<run>.pt [--image path/to/bird.jpg]  # default: 6 correct + 6 wrong val images
+python -m src.cli curves   --runs outputs/checkpoints/<run_dir> [...] --labels "Name" [...]
 
 # M2 (later)
 python -m src.cli train   --task colorization --config configs/color.yaml
@@ -286,7 +288,7 @@ class Encoder(nn.Module):
 - **Time:** both searches took ~3.4 h. Random found its best after 1.5 h, grid after 2.8 h.
 - **Only the backbone lr matters:** 3e-5 gives ~72%, 1e-4 ~75–76%, 3e-4 ~78–79%. Weight decay, dropout and head lr changed results by ≤ ~1 point.
 - **Caveat:** 3e-4 is the top of the grid, and its trials were still improving at epoch 8.
-- **Open TODO:** verify the Bergstra & Bengio (2012) citation before it goes into the report.
+- **Citation (checked 2 Nov on jmlr.org):** Bergstra & Bengio, *Random Search for Hyper-Parameter Optimization*, JMLR 13:281–305, 2012. Its abstract says that for most data sets only a few hyperparameters really matter, which is the case where random search helps.
 
 ## Evaluation
 
@@ -302,12 +304,33 @@ class Encoder(nn.Module):
   - Explain where the differences come from. Scoring lower is fine.
   - **Never invent or guess published numbers.** Cite the source, or leave a TODO.
 
+### How it is implemented, and the results (1 Nov 2026)
+
+- **Code and outputs:**
+  - `evaluate` runs the model once and saves logits + labels to `outputs/predictions/<run_dir>_<split>.npz` (gitignored).
+  - `metrics` (`src/evaluation/metrics.py` + `src/visualization/evaluation.py`) computes everything from that file, so the test set is not run again.
+  - `--checkpoint` adds the numbers to the training run's W&B summary as `<split>_eval_*`.
+  - Tables and figures go to `outputs/figures/classification/`.
+- **Final ResNet50, test set:**
+  - Top-1 82.84%, top-5 95.34%; macro precision/recall/F1 83.08/83.02/82.73%.
+  - 52.8% of the errors stay within one group (e.g. gull → gull).
+  - Worst pairs: California → Western Gull, American Crow → Common Raven, Common Tern → Arctic Tern.
+- **Scratch CNN, test (run once, 2 Nov):** 44.77% top-1, 75.27% top-5, macro F1 44.21%. Only 27% of its errors stay within one group. (Val: 43.38%, macro F1 40.92%.)
+- **Benchmark (`docs/benchmark.md`, numbers read from the papers):**
+  - A plain ResNet-50 at **448 px** gets 84.5% (NTS-Net, Table 2) and 84.9% (CIN, Table 1). Our 82.8% at 224 px is 1.7–2.1 points lower.
+  - Fine-grained methods reach 87.5–88.1%.
+  - All venues and titles checked on 2 Nov against the publisher pages. Branson et al.'s BMVC 2014 title differs from its arXiv title.
+
 ## Grad-CAM
 
 - Implement it ourselves with forward/backward hooks on `encoder.gradcam_layer`, not a black-box library call. We have to be able to explain it.
 - Produce heatmaps for **correct and wrong** predictions, for both the scratch and the transfer model.
 - Save grids showing: original | heatmap overlay | predicted vs true label.
 - The analysis should answer: is the model looking at the bird, or at the background (water, branches, sky)?
+- **Implemented** in `src/visualization/gradcam.py` (`cli gradcam`), on val images only.
+  - **Deviation from the paper:** it explains `y_c − mean(y)` instead of the raw logit `y_c` (`relative=True`).
+  - Why: the final ResNet50's predicted logit is negative for 98% of images, which made 30% of the raw-logit maps blank.
+- **Result:** ResNet50 looks at the bird and its identifying parts. The scratch CNN's maps are broad and spill onto the background. See `docs/experiment_log.md`, 1 Nov.
 
 ## Required visualizations
 
@@ -328,11 +351,11 @@ All figures are generated by code into `outputs/figures/<task>/`, with titles an
 - [ ] Augmentation pipeline + example grid
 - [ ] Encoder interface + scratch CNN
 - [ ] Trainer + W&B logging + checkpointing
-- [ ] Scratch baseline trained and evaluated
-- [ ] Transfer-learning model trained and evaluated
+- [x] Scratch baseline trained and evaluated (Sameh trained, Karim evaluated on test, 2 Nov)
+- [x] Transfer-learning model trained and evaluated (Adam trained, Karim evaluated on test, 1 Nov)
 - [x] Grid search + random search + comparison (Karim, 29 Oct)
-- [ ] Grad-CAM (correct + wrong, both models)
-- [ ] CLI: train / evaluate / predict / gradcam for classification
+- [x] Grad-CAM (correct + wrong, both models) (Karim, 1 Nov)
+- [x] CLI: train / evaluate / predict / gradcam for classification (+ metrics, curves, tune, compare-tuning)
 - [ ] README commands verified from a clean environment
 - [ ] Submit to LMS by 1 Nov
 

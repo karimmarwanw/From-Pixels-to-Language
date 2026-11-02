@@ -1,0 +1,5 @@
+run,epochs,best_epoch,best_val_acc,val_top5,train_acc,gap
+Scratch CNN,40,37,0.4349,0.7353,0.6116,0.1766
+ResNet50 stage 1 (frozen),10,8,0.5617,0.8554,0.7352,0.1734
+ResNet50 stage 2 (first try),20,17,0.7942,0.9377,0.9980,0.2038
+ResNet50 stage 2 final (grid-10),20,16,0.8176,0.9466,0.9965,0.1789
