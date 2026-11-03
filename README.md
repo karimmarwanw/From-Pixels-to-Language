@@ -23,6 +23,18 @@ python -m src.cli train --task classification --config configs/cls_scratch.yaml 
 # From-scratch CNN baseline
 python -m src.cli train --task classification --config configs/cls_scratch.yaml
 
+# ResNet50 stage 1: pretrained encoder frozen, only the head trains
+python -m src.cli train --task classification --config configs/cls_transfer_stage1.yaml
+
+# ResNet50 stage 2: fine-tune everything, starting from the stage 1 best.pt
+python -m src.cli train --task classification --config configs/cls_transfer_stage2.yaml \
+    --override model.init_from=outputs/checkpoints/<stage1_run_dir>/best.pt
+
+# Final model: stage 2 again with the best tuning settings (grid-10)
+python -m src.cli train --task classification --config configs/cls_transfer_stage2.yaml \
+    --override model.init_from=outputs/checkpoints/<stage1_run_dir>/best.pt \
+    optim.backbone_lr=3e-4 optim.weight_decay=5e-4 model.dropout=0.5 run_name=resnet50-stage2-final
+
 # Resume an interrupted run (same W&B run, continues after the last finished epoch)
 python -m src.cli train --task classification --config configs/cls_scratch.yaml \
     --resume outputs/checkpoints/<run_dir>/last.pt
@@ -53,6 +65,16 @@ e.g. `--override optim.lr=3e-4 data.batch_size=32`.
 
 Each run writes `outputs/checkpoints/<run_name>_<timestamp>/` with `best.pt` (best val accuracy),
 `last.pt` (for resuming) and `history.csv` (one row per epoch).
+
+### Trained models
+
+All trained models are on [Google Drive](https://drive.google.com/drive/folders/1x-o4TiZagPx3iNt2oovr7WjlaOippsWK?usp=share_link),
+so inference does not need any training. The final model is `best.pt` in the `3_FINAL_stage2_grid10` folder.
+Pass the downloaded file to `--checkpoint`:
+
+```bash
+python -m src.cli predict --task classification --checkpoint path/to/best.pt --image bird.jpg
+```
 
 ## Hyperparameter tuning (Task 1.2)
 
